@@ -3,40 +3,22 @@
     <!-- Header -->
     <q-toolbar class="bg-grey-2">
       <q-icon name="group" class="q-mr-sm" />
-      <q-toolbar-title>
-        Členovia ({{ totalMembers }})
-      </q-toolbar-title>
-      
+      <q-toolbar-title> Členovia ({{ totalMembers }}) </q-toolbar-title>
+
       <!-- Close button for mobile -->
-      <q-btn
-        flat
-        dense
-        round
-        icon="close"
-        class="mobile-close-btn"
-        @click="$emit('close')"
-      >
+      <q-btn flat dense round icon="close" class="mobile-close-btn" @click="$emit('close')">
         <q-tooltip>Zavrieť</q-tooltip>
       </q-btn>
     </q-toolbar>
 
     <!-- Search -->
     <div class="q-pa-sm">
-      <q-input
-        v-model="search"
-        filled
-        dense
-        placeholder="Hľadať členov..."
-      >
+      <q-input v-model="search" filled dense placeholder="Hľadať členov...">
         <template v-slot:prepend>
           <q-icon name="search" />
         </template>
         <template v-slot:append v-if="search">
-          <q-icon 
-            name="close" 
-            @click="search = ''" 
-            class="cursor-pointer" 
-          />
+          <q-icon name="close" @click="search = ''" class="cursor-pointer" />
         </template>
       </q-input>
     </div>
@@ -52,7 +34,14 @@
             <q-icon name="circle" color="positive" size="xs" class="q-mr-xs" />
             Online ({{ onlineMembers.length }})
           </q-item-label>
-          
+
+          <member-item
+            v-for="member in onlineMembers"
+            :key="`online-${member.id}`"
+            :member="member"
+            :is-admin="isAdmin"
+            :is-current-user="member.id === currentUserId"
+          />
         </template>
 
         <!-- DND Members -->
@@ -61,7 +50,14 @@
             <q-icon name="do_not_disturb_on" color="warning" size="xs" class="q-mr-xs" />
             Nerušiť ({{ dndMembers.length }})
           </q-item-label>
-          
+
+          <member-item
+            v-for="member in dndMembers"
+            :key="`dnd-${member.id}`"
+            :member="member"
+            :is-admin="isAdmin"
+            :is-current-user="member.id === currentUserId"
+          />
         </template>
 
         <!-- Offline Members -->
@@ -70,7 +66,15 @@
             <q-icon name="radio_button_unchecked" color="grey" size="xs" class="q-mr-xs" />
             Offline ({{ offlineMembers.length }})
           </q-item-label>
-          
+
+          <member-item
+            v-for="member in offlineMembers"
+            :key="`offline-${member.id}`"
+            :member="member"
+            :is-admin="isAdmin"
+            :is-current-user="member.id === currentUserId"
+            :show-actions="false"
+          />
         </template>
 
         <!-- Empty State -->
@@ -86,68 +90,91 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
-import type { User, UserStatus } from '../types'
+import { defineComponent, type PropType } from 'vue';
+import MemberItem from './MemberItem.vue';
+import type { User, UserStatus } from '../types';
 
 export default defineComponent({
   name: 'MemberList',
+  components: {
+    MemberItem,
+  },
   props: {
     members: {
       type: Array as PropType<User[]>,
-      default: () => []
+      default: () => [],
     },
     isAdmin: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
+    isPrivateChannel: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['close'],
   data() {
     return {
       search: '',
-    }
+    };
   },
   computed: {
+    currentUserId(): number | null {
+      const userRaw = localStorage.getItem('currentUser');
+      if (!userRaw) {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(userRaw) as { id?: number };
+        return typeof parsed.id === 'number' ? parsed.id : null;
+      } catch (error) {
+        console.error('Failed to parse currentUser', error);
+        return null;
+      }
+    },
     filteredMembers(): User[] {
       if (!this.search) {
-        return this.members
+        return this.members;
       }
-      const searchLower = this.search.toLowerCase()
-      return this.members.filter(member => {
-        const nick = member.nickName.toLowerCase()
-        const first = member.firstName.toLowerCase()
-        const last = member.lastName.toLowerCase()
-        return nick.includes(searchLower) || first.includes(searchLower) || last.includes(searchLower)
-      })
+      const searchLower = this.search.toLowerCase();
+      return this.members.filter((member) => {
+        const nick = member.nickName.toLowerCase();
+        const first = member.firstName.toLowerCase();
+        const last = member.lastName.toLowerCase();
+        return (
+          nick.includes(searchLower) || first.includes(searchLower) || last.includes(searchLower)
+        );
+      });
     },
     onlineMembers(): User[] {
-      return this.filteredMembers.filter(member => member.status === 'online')
+      return this.filteredMembers.filter((member) => member.status === 'online');
     },
     dndMembers(): User[] {
-      return this.filteredMembers.filter(member => member.status === 'dnd')
+      return this.filteredMembers.filter((member) => member.status === 'dnd');
     },
     offlineMembers(): User[] {
-      return this.filteredMembers.filter(member => member.status === 'offline')
+      return this.filteredMembers.filter((member) => member.status === 'offline');
     },
     totalMembers(): number {
-      return this.members.length
-    }
+      return this.members.length;
+    },
   },
   methods: {
     getStatusText(status: UserStatus): string {
       switch (status) {
         case 'online':
-          return 'Online'
+          return 'Online';
         case 'dnd':
-          return 'Nerušiť'
+          return 'Nerušiť';
         case 'offline':
-          return 'Offline'
+          return 'Offline';
         default:
-          return 'Neznámy'
+          return 'Neznámy';
       }
-    }
-  }
-})
+    },
+  },
+});
 </script>
 
 <style scoped>
