@@ -36,6 +36,15 @@
         :current-channel-id="currentChannelId"
         @channel-selected="selectChannel"
       />
+
+      <!-- User Status Menu Component -->
+        <user-status-menu 
+          v-if="currentUser"
+          :current-user="currentUser"
+          :user-status="userStatus"
+          @status-changed="handleStatusChange"
+          @logout="handleLogout"
+        />
     </q-drawer>
 
     <!-- Right Drawer - Members -->
@@ -55,7 +64,8 @@
 import { defineComponent } from 'vue';
 import ChannelList from '../components/ChannelList.vue';
 import MemberList from '../components/MemberList.vue';
-import type { Channel, User } from '../types';
+import UserStatusMenu from '../components/UserStatus.vue';
+import type { Channel, User, UserStatus } from '../types';
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
 };
@@ -65,6 +75,7 @@ export default defineComponent({
   components: {
     ChannelList,
     MemberList,
+    UserStatusMenu
   },
   data() {
     return {
@@ -77,6 +88,9 @@ export default defineComponent({
     };
   },
   computed: {
+    userStatus(): UserStatus {
+      return this.currentUser?.status ?? 'offline'
+    },
     currentChannel(): ChannelWithMeta | null {
       return this.channels.find((channel) => channel.id === this.currentChannelId) || null;
     },
@@ -226,6 +240,14 @@ export default defineComponent({
         this.leftDrawerOpen = false;
       }
       localStorage.setItem('currentChannelId', String(channel.id));
+    },
+    handleLogout(): void {
+      //this.$router.push('/auth')
+    },
+    handleStatusChange(newStatus: UserStatus): void {
+      if (this.currentUser) {
+        this.currentUser.status = newStatus;
+      }
     },
   },
 });
