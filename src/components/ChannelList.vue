@@ -99,7 +99,7 @@
 
     <!-- Create Channel Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
-      <q-card style="min-width: 400px">
+      <q-card style="min-width: 600px; min-height: 350px;">
         <q-card-section>
           <div class="text-h6">Vytvoriť nový kanál</div>
         </q-card-section>
@@ -124,12 +124,14 @@
             class="q-mt-md"
           />
 
-          <q-banner v-if="newChannel.isPrivate" dense class="bg-amber-1 text-amber-9 q-mt-sm">
-            <template v-slot:avatar>
-              <q-icon name="info" color="amber" />
-            </template>
-            Do súkromného kanála môžeš pozývať len ty ako správca
-          </q-banner>
+          <q-slide-transition>
+            <div v-if="newChannel.isPrivate" class="q-mt-sm">
+              <q-banner dense class="bg-amber-1 text-amber-9">
+                <template #avatar><q-icon name="info" color="amber" /></template>
+                Do súkromného kanála môžeš pozývať len ty ako správca
+              </q-banner>
+            </div>
+          </q-slide-transition>
         </q-card-section>
 
         <q-card-actions align="right">
