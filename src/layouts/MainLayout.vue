@@ -30,21 +30,29 @@
       bordered
       :width="drawerWidth"
       :breakpoint="600"
+      class="left-drawer-container"
     >
-      <channel-list
-        :channels="channels"
-        :current-channel-id="currentChannelId"
-        @channel-selected="selectChannel"
-      />
+      <div class="drawer-content-wrapper">
+        <!-- Channel List - takes available space -->
+        <div class="channel-list-area">
+          <channel-list
+            :channels="channels"
+            :current-channel-id="currentChannelId"
+            @channel-selected="selectChannel"
+          />
+        </div>
 
-      <!-- User Status Menu Component -->
-        <user-status-menu 
-          v-if="currentUser"
-          :current-user="currentUser"
-          :user-status="userStatus"
-          @status-changed="handleStatusChange"
-          @logout="handleLogout"
-        />
+        <!-- User Status - fixed at bottom -->
+        <div class="user-status-area">
+          <user-status-menu 
+            v-if="currentUser"
+            :current-user="currentUser"
+            :user-status="userStatus"
+            @status-changed="handleStatusChange"
+            @logout="handleLogout"
+          />
+        </div>
+      </div>
     </q-drawer>
 
     <!-- Right Drawer - Members -->
@@ -57,6 +65,25 @@
     >
       <member-list :members="members" :is-admin="isChannelAdmin" />
     </q-drawer>
+
+    <!-- Page Container for Messages - takes full space between drawers -->
+    <q-page-container>
+      <router-view 
+        v-if="currentChannelId"
+        :channel-id="currentChannelId"
+        :current-user="currentUser"
+        :members="members"
+        @message-sent="handleMessageSent"
+      />
+      
+      <!-- Empty state when no channel selected -->
+      <q-page v-else class="flex flex-center">
+        <div class="text-center">
+          <q-icon name="forum" size="80px" color="grey-5" />
+          <div class="text-h6 text-grey-7 q-mt-md">Vyber kanál na začatie konverzácie</div>
+        </div>
+      </q-page>
+    </q-page-container>
   </q-layout>
 </template>
 
@@ -65,7 +92,7 @@ import { defineComponent } from 'vue';
 import ChannelList from '../components/ChannelList.vue';
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
-import type { Channel, User, UserStatus } from '../types';
+import type { Channel, User, UserStatus, ChatMessage } from '../types';
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
 };
@@ -113,14 +140,12 @@ export default defineComponent({
       return this.members.length;
     },
     drawerWidth(): number {
-      // Responsive drawer width based on window size
       if (typeof window === 'undefined') return 300;
       const width = window.innerWidth;
       if (width >= 1920) return 320;
       if (width >= 1440) return 300;
       if (width >= 1024) return 280;
       if (width >= 768) return 260;
-      // On mobile, use full width (will be overridden by CSS to 100vw)
       if (width < 600) return width;
       return 260;
     },
@@ -249,6 +274,10 @@ export default defineComponent({
         this.currentUser.status = newStatus;
       }
     },
+    handleMessageSent(message: ChatMessage): void {
+      // Handle message sent - could emit to parent or update state
+      console.log('Message sent:', message);
+    },
   },
 });
 </script>
@@ -258,7 +287,6 @@ export default defineComponent({
   background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
 }
 
-/* Responsive header adjustments */
 @media (max-width: 767px) {
   :deep(.q-toolbar) {
     padding: 0 8px;
@@ -303,14 +331,40 @@ export default defineComponent({
   }
 }
 
-/* Responsive drawer content */
 :deep(.q-drawer) {
   transition: width 0.3s ease;
 }
 
+
+.left-drawer-container :deep(.q-drawer__content) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 !important;
+}
+
+.drawer-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.channel-list-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.user-status-area {
+  flex: 0 0 auto;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+}
+
 @media (max-width: 1023px) {
   :deep(.q-drawer__content) {
-    padding: 8px;
+    padding: 0 !important;
   }
 }
 
@@ -318,10 +372,6 @@ export default defineComponent({
   :deep(.q-drawer) {
     width: 100vw !important;
     max-width: 100vw !important;
-  }
-
-  :deep(.q-drawer__content) {
-    padding: 12px;
   }
 }
 

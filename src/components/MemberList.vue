@@ -178,7 +178,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Hide close button on desktop, show on mobile */
+
 .mobile-close-btn {
   display: none;
 }
