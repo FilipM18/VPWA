@@ -1,5 +1,5 @@
 <template>
-  <div class="column no-wrap full-height">
+  <div class="channel-list-wrapper column no-wrap">
     <!-- Header -->
     <q-toolbar
       :style="{
@@ -269,6 +269,12 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.channel-list-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .mobile-close-btn {
   display: none;
 }

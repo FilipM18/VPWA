@@ -1,25 +1,37 @@
 <template>
-  <q-btn flat dense round>
-    <q-avatar size="32px">
-      <div 
-        v-if="!currentUser?.avatarUrl" 
-        class="absolute-full flex flex-center bg-accent text-white"
-      >
-        {{ userInitial }}
+  <div class="user-status-container">
+    <q-btn flat class="full-width user-status-button">
+      <div class="row items-center no-wrap full-width">
+        <q-avatar size="40px">
+          <div 
+            v-if="!currentUser?.avatarUrl" 
+            class="absolute-full flex flex-center bg-accent text-white"
+          >
+            {{ userInitial }}
+          </div>
+          <img 
+            v-else 
+            :src="currentUser.avatarUrl"
+            @error="handleAvatarError"
+          >
+          <q-badge 
+            :color="statusColor" 
+            floating 
+            rounded
+          />
+        </q-avatar>
+        
+        <div class="q-ml-md text-left ellipsis">
+          <div class="text-weight-medium">{{ currentUser?.nickName }}</div>
+          <div class="text-caption text-grey-6">{{ statusLabel }}</div>
+        </div>
+        
+        <q-space />
+        
+        <q-icon name="settings" size="20px" class="text-grey-6" />
       </div>
-      <img 
-        v-else 
-        :src="currentUser.avatarUrl"
-        @error="handleAvatarError"
-      >
-      <q-badge 
-        :color="statusColor" 
-        floating 
-        rounded
-      />
-    </q-avatar>
-    
-    <q-menu transition-show="jump-down" transition-hide="jump-up">
+      
+      <q-menu transition-show="jump-down" transition-hide="jump-up">
       <q-card style="min-width: 300px">
         <!-- User Info -->
         <q-card-section class="row items-center no-wrap">
@@ -91,7 +103,8 @@
         </q-list>
       </q-card>
     </q-menu>
-  </q-btn>
+    </q-btn>
+  </div>
 </template>
 
 <script lang="ts">
@@ -163,6 +176,18 @@ export default defineComponent({
         default:
           return 'grey'
       }
+    },
+    statusLabel(): string {
+      switch (this.userStatus) {
+        case 'online':
+          return 'Online'
+        case 'dnd':
+          return 'Nerušiť'
+        case 'offline':
+          return 'Offline'
+        default:
+          return 'Online'
+      }
     }
   },
   methods: {
@@ -187,3 +212,29 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped lang="scss">
+.user-status-container {
+  width: 100%;
+  padding: 12px;
+  background-color: #f5f5f5;
+  
+  .user-status-button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-transform: none;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  .ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+}
+</style>
