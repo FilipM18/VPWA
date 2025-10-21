@@ -1,5 +1,5 @@
 <template>
-  <div class="channel-list-wrapper column no-wrap">
+  <div class="channel-list-wrapper column no-wrap full-height">
     <!-- Header -->
     <q-toolbar
       :style="{
@@ -17,6 +17,7 @@
         flat
         dense
         round
+        v-show="$q.screen.lt.md"
         icon="close"
         color="white"
         class="mobile-close-btn"
@@ -29,10 +30,10 @@
     <!-- Search -->
     <div class="q-pa-sm">
       <q-input v-model="search" filled dense placeholder="Hľadať kanály...">
-        <template v-slot:prepend>
+        <template #prepend>
           <q-icon name="search" />
         </template>
-        <template v-slot:append v-if="search">
+        <template #append v-if="search">
           <q-icon name="close" @click="search = ''" class="cursor-pointer" />
         </template>
       </q-input>
@@ -268,20 +269,3 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.channel-list-wrapper {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.mobile-close-btn {
-  display: none;
-}
-
-@media (max-width: 1023px) {
-  .mobile-close-btn {
-    display: inline-flex;
-  }
-}
-</style>

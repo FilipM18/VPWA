@@ -2,19 +2,44 @@
   <q-layout view="hHh LpR fFf">
     <!-- Header -->
     <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="menu" @click="toggleLeftDrawer" />
+      <q-toolbar class="q-px-sm">
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          @click="toggleLeftDrawer"
+          :size="$q.screen.lt.sm ? 'sm' : 'md'"
+        />
 
         <q-toolbar-title class="row items-center no-wrap">
-          <q-icon name="tag" size="24px" class="q-mr-sm" />
-          <span class="ellipsis">{{ currentChannelName }}</span>
-          <q-badge v-if="isCurrentChannelPrivate" color="amber" label="Súkromný" class="q-ml-sm" />
+          <q-icon
+            name="tag"
+            :size="$q.screen.lt.sm ? '20px' : '24px'"
+            class="q-mr-sm"
+          />
+          <span class="ellipsis" :class="$q.screen.lt.sm ? 'text-body2' : ''">
+            {{ currentChannelName }}
+          </span>
+          <q-badge
+            v-if="isCurrentChannelPrivate && $q.screen.gt.xs"
+            color="amber"
+            label="Súkromný"
+            class="q-ml-sm"
+          />
         </q-toolbar-title>
 
         <q-space />
 
         <!-- Members Toggle -->
-        <q-btn flat dense round icon="group" @click="toggleRightDrawer">
+        <q-btn
+          flat
+          dense
+          round
+          icon="group"
+          @click="toggleRightDrawer"
+          :size="$q.screen.lt.sm ? 'sm' : 'md'"
+        >
           <q-badge v-if="onlineMembers > 0" color="positive" floating>
             {{ onlineMembers }}
           </q-badge>
@@ -26,25 +51,27 @@
     <!-- Left Drawer - Channels -->
     <q-drawer
       v-model="leftDrawerOpen"
-      show-if-above
       bordered
-      :width="drawerWidth"
-      :breakpoint="600"
-      class="left-drawer-container"
+      :behavior="$q.screen.lt.sm ? 'mobile' : 'default'"
+      :show-if-above="$q.screen.gt.lg"
+      :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
+      :breakpoint="1024"
     >
-      <div class="drawer-content-wrapper">
+      <div class="column full-height">
         <!-- Channel List - takes available space -->
-        <div class="channel-list-area">
+        <div class="col overflow-hidden">
           <channel-list
             :channels="channels"
             :current-channel-id="currentChannelId"
             @channel-selected="selectChannel"
+            @close="$q.screen.lt.md && (leftDrawerOpen = false)"
           />
         </div>
 
         <!-- User Status - fixed at bottom -->
-        <div class="user-status-area">
-          <user-status-menu 
+        <q-separator />
+        <div class="col-auto bg-white">
+          <user-status-menu
             v-if="currentUser"
             :current-user="currentUser"
             :user-status="userStatus"
@@ -60,22 +87,23 @@
       v-model="rightDrawerOpen"
       side="right"
       bordered
-      :width="drawerWidth"
-      :breakpoint="600"
+      :behavior="$q.screen.lt.sm ? 'mobile' : 'default'"
+      :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
+      :breakpoint="1024"
     >
-      <member-list :members="members" :is-admin="isChannelAdmin" />
+      <member-list :members="members" :is-admin="isChannelAdmin" @close="$q.screen.lt.md && (rightDrawerOpen = false)" />
     </q-drawer>
 
     <!-- Page Container for Messages - takes full space between drawers -->
     <q-page-container>
-      <router-view 
+      <router-view
         v-if="currentChannelId"
         :channel-id="currentChannelId"
         :current-user="currentUser"
         :members="members"
         @message-sent="handleMessageSent"
       />
-      
+
       <!-- Empty state when no channel selected -->
       <q-page v-else class="flex flex-center">
         <div class="text-center">
@@ -140,26 +168,18 @@ export default defineComponent({
       return this.members.length;
     },
     drawerWidth(): number {
-      if (typeof window === 'undefined') return 300;
-      const width = window.innerWidth;
-      if (width >= 1920) return 320;
-      if (width >= 1440) return 300;
-      if (width >= 1024) return 280;
-      if (width >= 768) return 260;
-      if (width < 600) return width;
-      return 260;
-    },
-    breakpoint(): string {
-      if (typeof window === 'undefined') return 'desktop';
-      const width = window.innerWidth;
-      if (width >= 1920) return 'xl';
-      if (width >= 1440) return 'lg';
-      if (width >= 1024) return 'md';
-      if (width >= 768) return 'sm';
-      return 'xs';
-    },
+    return this.$q.screen.gt.lg ? 300
+         : this.$q.screen.gt.md ? 280
+         : 260
+    }
   },
   watch: {
+    leftDrawerOpen(v: boolean) {
+      if (v && this.$q.screen.lt.sm) this.rightDrawerOpen = false
+    },
+    rightDrawerOpen(v: boolean) {
+      if (v && this.$q.screen.lt.sm) this.leftDrawerOpen = false
+      },
     currentChannelId(newId: number | null) {
       if (newId) {
         this.loadChannelData(newId);
@@ -171,6 +191,7 @@ export default defineComponent({
   },
   mounted() {
     this.loadInitialData();
+
   },
   methods: {
     initializeApp(): void {
@@ -253,15 +274,17 @@ export default defineComponent({
       this.members = defaultMembers;
     },
 
-    toggleLeftDrawer(): void {
-      this.leftDrawerOpen = !this.leftDrawerOpen;
-    },
-    toggleRightDrawer(): void {
-      this.rightDrawerOpen = !this.rightDrawerOpen;
+    toggleLeftDrawer() {
+      if (this.$q.screen.lt.sm) this.rightDrawerOpen = false
+      this.leftDrawerOpen = !this.leftDrawerOpen
+      },
+    toggleRightDrawer() {
+      if (this.$q.screen.lt.sm) this.leftDrawerOpen = false
+      this.rightDrawerOpen = !this.rightDrawerOpen
     },
     selectChannel(channel: ChannelWithMeta): void {
       this.currentChannelId = channel.id;
-      if (this.$q.screen.lt.md) {
+      if (this.$q.screen.lt.sm) {
         this.leftDrawerOpen = false;
       }
       localStorage.setItem('currentChannelId', String(channel.id));
@@ -275,110 +298,8 @@ export default defineComponent({
       }
     },
     handleMessageSent(message: ChatMessage): void {
-      // Handle message sent - could emit to parent or update state
       console.log('Message sent:', message);
     },
   },
 });
 </script>
-
-<style scoped>
-.bg-gradient {
-  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
-}
-
-@media (max-width: 767px) {
-  :deep(.q-toolbar) {
-    padding: 0 8px;
-    min-height: 48px;
-  }
-
-  :deep(.q-toolbar__title) {
-    font-size: 16px;
-  }
-
-  :deep(.q-btn) {
-    min-width: 36px;
-    min-height: 36px;
-  }
-
-  :deep(.q-icon) {
-    font-size: 20px;
-  }
-
-  :deep(.q-badge) {
-    font-size: 10px;
-    padding: 2px 4px;
-  }
-}
-
-@media (max-width: 599px) {
-  :deep(.q-toolbar) {
-    min-height: 44px;
-  }
-
-  :deep(.q-toolbar__title) {
-    font-size: 14px;
-  }
-
-  :deep(.q-toolbar__title .q-badge) {
-    display: none;
-  }
-
-  :deep(.q-btn) {
-    min-width: 32px;
-    min-height: 32px;
-  }
-}
-
-:deep(.q-drawer) {
-  transition: width 0.3s ease;
-}
-
-
-.left-drawer-container :deep(.q-drawer__content) {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 0 !important;
-}
-
-.drawer-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
-.channel-list-area {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.user-status-area {
-  flex: 0 0 auto;
-  border-top: 1px solid #e0e0e0;
-  background: white;
-}
-
-@media (max-width: 1023px) {
-  :deep(.q-drawer__content) {
-    padding: 0 !important;
-  }
-}
-
-@media (max-width: 599px) {
-  :deep(.q-drawer) {
-    width: 100vw !important;
-    max-width: 100vw !important;
-  }
-}
-
-@media (max-width: 600px) {
-  :deep(.q-drawer--mobile) {
-    top: 0 !important;
-    height: 100vh !important;
-  }
-}
-</style>

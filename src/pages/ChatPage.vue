@@ -1,25 +1,31 @@
 <template>
-  <q-page class="chat-page-container">
+  <q-page class="column full-height bg-grey-1">
     <!-- Messages Area -->
-    <div class="messages-area">
-      <q-scroll-area 
+    <div class="col overflow-hidden">
+      <q-scroll-area
         ref="scrollArea"
-        class="messages-scroll-area"
+        class="full-height full-width"
       >
         <!-- Messages Container -->
-        <div class="messages-container q-pa-md">
-          <!-- Empty State -->
-          <div class="text-center q-pa-xl">
-            <q-icon name="forum" size="80px" color="grey-5" />
-            <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
-            <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
+        <div class="row justify-center full-width">
+          <div
+            class="col-xs-12 col-sm-12 col-md-10 col-lg-8 col-xl-7 q-pa-md"
+            :class="$q.screen.lt.md ? 'q-pa-sm' : 'q-pa-md'"
+          >
+            <!-- Empty State -->
+            <div class="text-center q-pa-xl">
+              <q-icon name="forum" size="80px" color="grey-5" />
+              <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
+              <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
+            </div>
           </div>
         </div>
       </q-scroll-area>
     </div>
 
     <!-- Message Input at Bottom -->
-    <div class="message-input-area">
+    <q-separator />
+    <div class="col-auto bg-white">
       <message-input
         :channel-id="channelId"
         :members="members"
@@ -66,64 +72,3 @@ export default defineComponent({
   }
 })
 </script>
-
-<style scoped>
-.chat-page-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: #f5f5f5;
-}
-
-.messages-area {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.messages-scroll-area {
-  height: 100%;
-  width: 100%;
-}
-
-.messages-container {
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 24px;
-  box-sizing: border-box;
-  min-height: 100%;
-}
-
-.message-input-area {
-  flex: 0 0 auto;
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  z-index: 100;
-}
-
-@media (max-width: 1600px) {
-  .messages-container {
-    max-width: 1000px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .messages-container {
-    max-width: 900px;
-  }
-}
-
-@media (max-width: 1023px) {
-  .messages-container {
-    max-width: 100%;
-    padding: 16px;
-  }
-}
-
-@media (max-width: 767px) {
-  .messages-container {
-    padding: 12px;
-  }
-}
-</style>
