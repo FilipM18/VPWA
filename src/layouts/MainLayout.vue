@@ -97,7 +97,7 @@
     <!-- Page Container for Messages - takes full space between drawers -->
     <q-page-container>
       <router-view
-        v-if="currentChannelId"
+        v-if="currentChannelId && currentUser"
         :channel-id="currentChannelId"
         :current-user="currentUser"
         :members="members"
@@ -105,11 +105,16 @@
       />
 
       <!-- Empty state when no channel selected -->
-      <q-page v-else class="flex flex-center">
+      <q-page v-else-if="!currentChannelId" class="flex flex-center">
         <div class="text-center">
           <q-icon name="forum" size="80px" color="grey-5" />
           <div class="text-h6 text-grey-7 q-mt-md">Vyber kanál na začatie konverzácie</div>
         </div>
+      </q-page>
+      
+      <!-- Loading state -->
+      <q-page v-else class="flex flex-center">
+        <q-spinner color="primary" size="50px" />
       </q-page>
     </q-page-container>
   </q-layout>
@@ -121,6 +126,8 @@ import ChannelList from '../components/ChannelList.vue';
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage } from '../types';
+import { mockUsers, mockChannels } from '../utils/mockData';
+
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
 };
@@ -187,49 +194,34 @@ export default defineComponent({
     },
   },
   created() {
+    console.log('MainLayout created')
     this.initializeApp();
   },
   mounted() {
+    console.log('MainLayout mounted')
     this.loadInitialData();
 
   },
   methods: {
     initializeApp(): void {
-      const defaultUser: User = {
-        id: 1,
-        nickName: 'TestUser',
-        firstName: 'Test',
-        lastName: 'User',
-        email: 'test@example.com',
-        status: 'online',
-      };
-      this.currentUser = defaultUser;
+      const user = mockUsers[0];
+      if (user) {
+        this.currentUser = {
+          ...user,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as User;
+        console.log('currentUser set to:', this.currentUser)
+      }
     },
     loadInitialData(): void {
-      const defaultChannels: ChannelWithMeta[] = [
-        {
-          id: 1,
-          name: 'general',
-          isPrivate: false,
-          adminId: this.currentUser?.id || 1,
-          createdAt: new Date(),
-          lastActivityAt: new Date(),
-          unreadCount: 0,
-        },
-        {
-          id: 2,
-          name: 'random',
-          isPrivate: false,
-          adminId: this.currentUser?.id || 1,
-          createdAt: new Date(),
-          lastActivityAt: new Date(),
-          unreadCount: 0,
-        },
-      ];
-      this.channels = defaultChannels;
+      // Load channels from mock data - dates are already Date objects
+      this.channels = mockChannels;
+      console.log('Channels loaded:', this.channels.length, this.channels)
 
       if (this.channels.length > 0 && !this.currentChannelId) {
         const firstChannel = this.channels[0];
+        console.log('Selecting first channel:', firstChannel)
         if (firstChannel) {
           this.selectChannel(firstChannel);
         }
@@ -245,33 +237,9 @@ export default defineComponent({
       if (!id) {
         return;
       }
-      const defaultMembers: User[] = [
-        {
-          id: this.currentUser?.id || 1,
-          nickName: this.currentUser?.nickName || 'TestUser',
-          firstName: this.currentUser?.firstName || 'Test',
-          lastName: this.currentUser?.lastName || 'User',
-          email: this.currentUser?.email || 'test@example.com',
-          status: this.currentUser?.status || 'online',
-        },
-        {
-          id: 2,
-          nickName: 'Eva',
-          firstName: 'Eva',
-          lastName: 'Nováková',
-          email: 'eva@example.com',
-          status: 'online',
-        },
-        {
-          id: 3,
-          nickName: 'Peter',
-          firstName: 'Peter',
-          lastName: 'Horváth',
-          email: 'peter@example.com',
-          status: 'dnd',
-        },
-      ];
-      this.members = defaultMembers;
+
+      // Load all users from mock data as members
+      this.members = mockUsers;
     },
 
     toggleLeftDrawer() {
