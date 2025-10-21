@@ -6,7 +6,7 @@
       <q-toolbar-title> Členovia ({{ totalMembers }}) </q-toolbar-title>
 
       <!-- Close button for mobile -->
-      <q-btn flat dense round icon="close" class="mobile-close-btn" @click="$emit('close')">
+      <q-btn flat dense round  :hidden="!$q.screen.lt.sm" icon="close" class="mobile-close-btn" @click="$emit('close')">
         <q-tooltip>Zavrieť</q-tooltip>
       </q-btn>
     </q-toolbar>
@@ -177,15 +177,3 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-
-.mobile-close-btn {
-  display: none;
-}
-
-@media (max-width: 600px) {
-  .mobile-close-btn {
-    display: inline-flex;
-  }
-}
-</style>

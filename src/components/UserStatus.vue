@@ -1,36 +1,36 @@
 <template>
-  <div class="user-status-container">
-    <q-btn flat class="full-width user-status-button">
+  <div class="q-pa-sm bg-grey-2">
+    <q-btn flat no-caps class="full-width" :padding="$q.screen.lt.sm ? '8px 8px' : '8px 12px'">
       <div class="row items-center no-wrap full-width">
         <q-avatar size="40px">
-          <div 
-            v-if="!currentUser?.avatarUrl" 
+          <div
+            v-if="!currentUser?.avatarUrl"
             class="absolute-full flex flex-center bg-accent text-white"
           >
             {{ userInitial }}
           </div>
-          <img 
-            v-else 
+          <img
+            v-else
             :src="currentUser.avatarUrl"
             @error="handleAvatarError"
           >
-          <q-badge 
-            :color="statusColor" 
-            floating 
+          <q-badge
+            :color="statusColor"
+            floating
             rounded
           />
         </q-avatar>
-        
-        <div class="q-ml-md text-left ellipsis">
-          <div class="text-weight-medium">{{ currentUser?.nickName }}</div>
-          <div class="text-caption text-grey-6">{{ statusLabel }}</div>
+
+        <div class="q-ml-md text-left col ellipsis">
+          <div class="text-weight-medium ellipsis">{{ currentUser?.nickName }}</div>
+          <div class="text-caption text-grey-6 ellipsis">{{ statusLabel }}</div>
         </div>
-        
+
         <q-space />
-        
+
         <q-icon name="settings" size="20px" class="text-grey-6" />
       </div>
-      
+
       <q-menu transition-show="jump-down" transition-hide="jump-up">
       <q-card style="min-width: 300px">
         <!-- User Info -->
@@ -45,13 +45,13 @@
             <div class="text-caption text-grey">{{ currentUser?.email }}</div>
           </div>
         </q-card-section>
-        
+
         <q-separator />
-        
+
         <!-- Status Options -->
         <q-list dense>
           <q-item-label header>Nastaviť status</q-item-label>
-          
+
           <q-item
             v-for="status in statusOptions"
             :key="status.value"
@@ -72,9 +72,9 @@
               <q-icon name="check" color="primary" />
             </q-item-section>
           </q-item>
-          
+
           <q-separator />
-          
+
           <!-- Settings -->
           <q-item>
             <q-item-section>
@@ -84,15 +84,15 @@
               </q-item-label>
             </q-item-section>
             <q-item-section side>
-              <q-toggle 
-                v-model="mentionOnly" 
+              <q-toggle
+                v-model="mentionOnly"
                 color="primary"
               />
             </q-item-section>
           </q-item>
-          
+
           <q-separator />
-          
+
           <!-- Logout -->
           <q-item clickable v-ripple @click="handleLogout">
             <q-item-section avatar>
@@ -212,29 +212,3 @@ export default defineComponent({
   }
 })
 </script>
-
-<style scoped lang="scss">
-.user-status-container {
-  width: 100%;
-  padding: 12px;
-  background-color: #f5f5f5;
-  
-  .user-status-button {
-    padding: 8px 12px;
-    border-radius: 8px;
-    text-transform: none;
-    
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.05);
-    }
-  }
-  
-  .ellipsis {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-  }
-}
-</style>
