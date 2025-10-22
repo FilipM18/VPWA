@@ -4,7 +4,7 @@
     <!-- Messages Area -->
     <div class="col overflow-hidden">
       <!-- Messages Container -->
-      <div class="row justify-center full-width">
+      <div class="full-width q-pa-xl">
         <q-infinite-scroll
           reverse
         >
@@ -18,14 +18,14 @@
             <!-- Date Separators and Messages -->
             <template v-for="(item, index) in messagesWithDates" :key="`item-${index}`">
               <!-- Date Separator -->
-              <div 
-                v-if="item.type === 'date'" 
+              <div
+                v-if="item.type === 'date'"
                 class="date-separator q-my-md"
               >
-                <q-chip 
-                  color="grey-4" 
-                  text-color="grey-8" 
-                  icon="event" 
+                <q-chip
+                  color="grey-4"
+                  text-color="grey-8"
+                  icon="event"
                   square
                 >
                   {{ item.label }}
@@ -41,7 +41,7 @@
               />
             </template>
           </div>
-          
+
           <!-- Empty State -->
           <div v-else class="text-center q-pa-xl">
             <q-icon name="forum" size="80px" color="grey-5" />
@@ -49,14 +49,22 @@
             <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
           </div>
           </div>
-
-        </q-infinite-scroll>
+      </q-infinite-scroll>
       </div>
     </div>
 
+
+
     <!-- Message Input at Bottom -->
-    
+
     <div class="col-auto bg-white absolute-bottom input-stick">
+       <!-- Typing indicator -->
+    <q-slide-transition>
+      <div v-if="typingUsers.length > 0" class="bg-grey-2 q-pa-sm">
+        <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
+      </div>
+    </q-slide-transition>
+
       <q-separator />
       <message-input
         :current-user="currentUser"
@@ -65,6 +73,22 @@
         @message-sent="handleMessageSent"
       />
     </div>
+
+    <!-- Typing users dialog -->
+    <q-dialog v-model="showAllTypingUsers">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Píšu tieto osoby:</div>
+          <div v-for="user in typingUsers" :key="user.userId" class="q-mt-sm">
+            <span class="text-weight-bold">{{ user.nickName }}:</span>
+            <span class="text-italic">{{ user.messagePreview }}</span>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Zavrieť" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -74,6 +98,7 @@ import MessageInput from '../components/MessageInput.vue'
 import type { User, ChatMessage } from '../types'
 import MessageItem from '../components/MessageItem.vue'
 import { mockMessages } from '../utils/mockMessages'
+import TypingIndicator from '../components/TypingIndicator.vue'
 
 type MessageWithDate = { type: 'date'; label: string }
 type MessageEntry = { type: 'message'; data: ChatMessage }
@@ -83,7 +108,8 @@ export default defineComponent({
   name: 'ChatPage',
   components: {
     MessageInput,
-    MessageItem
+    MessageItem,
+    TypingIndicator
   },
   props: {
     channelId: {
@@ -102,7 +128,13 @@ export default defineComponent({
   emits: ['message-sent'],
   data() {
     return {
-      messages: [] as ChatMessage[]
+      messages: [] as ChatMessage[],
+      showAllTypingUsers: false,
+      typingUsers: [
+        { channelId: 1, userId: 1, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...' },
+        { channelId: 1, userId: 2, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?' },
+        { channelId: 1, userId: 3, nickName: 'Marek', isTyping: true, messagePreview: 'Pridám sa k vám...' }
+      ],
     }
   },
   mounted() {
@@ -145,6 +177,9 @@ export default defineComponent({
       }
       this.messages.push(newMessage)
       this.$emit('message-sent', newMessage)
+    },
+    openTypingDialog() {
+      this.showAllTypingUsers = true
     },
     formatDate(date: Date): string {
       const today = new Date()

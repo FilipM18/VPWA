@@ -1,46 +1,42 @@
 <template>
-  <div 
+  <div
     :class="[
       'q-mb-md',
       'rounded-borders',
       'q-pa-sm',
       'transition',
-      'bg-white',
       'relative-position',
-      {
-        'bg-amber-1': !!message.mentionsMe,
-        'bg-blue-grey-1': isOwn
-      }
+      { 'own': isOwn, 'someone': !isOwn, 'mentioned': isMentioned }
     ]"
-    :style="hoverStyle"
+    :style="[hoverStyle, bubbleStyle]"
     @mouseenter="onMouseEnter"
     @mouseleave="onMouseLeave"
   >
     <!-- Message Header -->
     <div class="row items-center no-wrap q-mb-xs">
-      <q-avatar 
-        :color="avatarColor" 
-        text-color="white" 
+      <q-avatar
+        :color="avatarColor"
+        text-color="white"
         :size="$q.screen.lt.sm ? '32px' : '36px'"
       >
         {{ message.author.charAt(0).toUpperCase() }}
       </q-avatar>
-      
+
       <div class="q-ml-sm">
         <span :class="['text-weight-bold', $q.screen.lt.sm ? 'text-body2' : 'text-body1']">
           {{ message.author }}
         </span>
-        <q-badge 
-          v-if="isOwn" 
-          color="blue-grey-5" 
-          label="ty" 
+        <q-badge
+          v-if="isOwn"
+          color="blue-grey-5"
+          label="ty"
           class="q-ml-xs"
         />
         <span :class="['text-caption text-grey-7', $q.screen.lt.sm ? 'q-ml-xs' : 'q-ml-sm']">
           {{ formatTime(message.timestamp) }}
         </span>
-        <span 
-          v-if="message.editedAt" 
+        <span
+          v-if="message.editedAt"
           class="text-caption text-grey-6 q-ml-xs"
         >
           (upravené)
@@ -51,8 +47,8 @@
 
       <!-- Message Actions -->
       <q-slide-transition>
-        <div 
-          v-show="showActions" 
+        <div
+          v-show="showActions"
           class="row no-wrap items-center"
           :class="$q.screen.lt.sm ? 'q-gutter-x-xs' : 'q-gutter-x-sm'"
         >
@@ -67,7 +63,7 @@
           >
             <q-tooltip>Odpovedať</q-tooltip>
           </q-btn>
-          
+
           <q-btn
             flat
             dense
@@ -79,7 +75,7 @@
           >
             <q-tooltip>Kopírovať</q-tooltip>
           </q-btn>
-          
+
           <q-btn
             v-if="isOwn"
             flat
@@ -92,7 +88,7 @@
           >
             <q-tooltip>Upraviť</q-tooltip>
           </q-btn>
-          
+
           <q-btn
             v-if="isOwn"
             flat
@@ -110,7 +106,7 @@
     </div>
 
     <!-- Message Content -->
-    <div 
+    <div
       :class="[
         'q-ml-lg q-pl-md',
         $q.screen.lt.sm ? 'text-body2' : 'text-body1'
@@ -118,15 +114,14 @@
       style="word-wrap: break-word; overflow-wrap: break-word; line-height: 1.6;"
     >
       <div v-html="formattedContent"></div>
-      
+
     </div>
 
-    <!-- Mention Badge -->
-    <q-badge 
-      v-if="message.mentionsMe" 
-      color="amber" 
-      text-color="amber-10" 
-      label="Bol si spomenutý" 
+    <q-badge
+      v-if="message.mentionsMe"
+      color="amber"
+      text-color="amber-10"
+      label="Bol si spomenutý"
       class="q-ml-lg q-mt-xs"
     />
   </div>
@@ -150,6 +145,10 @@ export default defineComponent({
     currentUserId: {
       type: Number,
       required: true
+    },
+    currentUserNick: {
+      type: String,
+      default: ''
     }
   },
   emits: ['reply', 'edit', 'delete', 'copy'],
@@ -160,6 +159,21 @@ export default defineComponent({
     }
   },
   computed: {
+    isMentioned(): boolean {
+      const byFlag = !!this.message.mentionsMe
+      const ids = (this.message as ChatMessage & { mentionedUserIds?: number[] }).mentionedUserIds
+      const byIds = Array.isArray(ids) && ids.includes(this.currentUserId)
+      const nick = this.currentUserNick?.trim()
+      const byText = !!(nick && new RegExp(`@${nick}\\b`, 'i').test(this.message.content))
+      return byFlag || byIds || byText
+    },
+    bubbleStyle(): Record<string,string> {
+      return {
+        maxWidth: 'min(92%, 720px)',
+        marginLeft: this.isOwn ? 'auto' : '0',
+        marginRight: this.isOwn ? '0' : 'auto'
+      }
+    },
     hoverStyle(): Record<string, string> {
       return {
         transform: this.isHovered ? 'translateX(2px)' : 'translateX(0)',
@@ -172,6 +186,10 @@ export default defineComponent({
       const colors = ['purple', 'blue', 'green', 'orange', 'red', 'teal', 'pink', 'indigo']
       const hash = this.message.author.split('').reduce((accumulator, character) => accumulator + character.charCodeAt(0), 0)
       return colors[hash % colors.length] || 'primary'
+    },
+    mentionedUsers(): string[] {
+      const m = this.message.content.match(/@([A-Za-z0-9_]+)/g) || []
+      return [...new Set(m.map(s=>s.slice(1)))]
     },
     formattedContent(): string {
       let content = this.escapeHtml(this.message.content)
@@ -214,3 +232,14 @@ export default defineComponent({
 })
 </script>
 
+<style scoped>
+/* moje vs ostatné */
+.own { background: var(--q-secondary); color: var(--q-dark); }
+.someone { background: #fff; color: var(--q-dark); }
+
+/* keď niekto mentione mňa alebo mňa */
+.mentioned:not(.own) {
+  background: rgba(193,154,107,0.20);
+  border-left: 3px solid #c19a6b;
+}
+</style>

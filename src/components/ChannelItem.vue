@@ -6,6 +6,7 @@
     active-class="bg-primary text-white"
     @click="$emit('select', channel)"
     class="rounded-borders q-mb-xs"
+    :class="[{ 'invited': invited }]"
   >
     <q-item-section avatar>
       <q-avatar size="32px" :color="channel.isPrivate ? 'orange' : 'primary'" text-color="white">
@@ -30,7 +31,7 @@
         class="q-mb-xs"
       />
 
-      <q-icon v-if="channel.isNewInvite" name="fiber_new" color="warning" size="sm" />
+      <q-icon v-if="invited" name="fiber_new" color="warning" size="sm" />
 
       <q-btn v-if="isActive" flat dense round icon="more_vert" size="sm" @click.stop>
         <q-menu auto-close>
@@ -77,7 +78,15 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    invited: {
+      type: Boolean,
+      default: false
+    }
   },
   emits: ['select', 'leave', 'delete'],
 });
 </script>
+<style scoped>
+.invited { background: rgba(193,154,107,.20); border-left: 3px solid #c19a6b; }
+.q-item--active.invited { background: var(--q-primary); color:#fff; border-left-color: transparent; }
+</style>

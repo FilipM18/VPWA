@@ -209,5 +209,20 @@ export const mockMessages: ChatMessage[] = [
       { emoji: '👍', userId: 3 },
       { emoji: '✅', userId: 4 }
     ]
+  },
+  {
+    id: 21,
+    channelId: 1,
+    authorId: 2,
+    author: 'maria_kovacova',
+    content: '@janko_novak Zhodíme to zajtra na daily standup. Zatiaľ sa môžete pozrieť na requirements.',
+    timestamp: new Date('2025-10-21T17:02:15.000Z'),
+    reactions: [
+      { emoji: '👍', userId: 2 },
+      { emoji: '👍', userId: 3 },
+      { emoji: '✅', userId: 4 }
+    ],
+    mentionedUserIds: [1],
+    mentionsMe: true
   }
 ]

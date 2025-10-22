@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-sm font-medium q-mb-sm bg-white w-full flex justify-center">
+  <div class="font-medium bg-white w-full flex justify-center" style="padding: 3px;">
     <div class="full-width q-my-none q-mx-auto">
 
       <q-slide-transition>
@@ -24,7 +24,7 @@
         </div>
       </q-slide-transition>
 
-      <div class="bg-white q-pa-md q-pa-sm-sm q-pa-xs-xs">
+      <div class="bg-white q-pa-xs-xs q-pa-md-md q-pa-sm-sm">
         <q-input
           ref="messageInput"
           v-model="message"
@@ -78,11 +78,6 @@
           </template>
         </q-input>
 
-        <div class="row justify-end q-mt-xs text-caption text-grey-6">
-          <span :class="{ 'text-warning': message.length > 1800 }">
-            {{ message.length }} / 2000
-          </span>
-        </div>
       </div>
 
     </div>

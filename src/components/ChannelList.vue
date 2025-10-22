@@ -56,6 +56,27 @@
     <!-- Channels List -->
     <q-scroll-area class="col">
       <q-list padding>
+        <!-- Pozvánky -->
+      <q-expansion-item
+        v-if="invitedChannels.length > 0"
+        default-opened
+        icon="campaign"
+        label="Pozvánky"
+        header-class="text-weight-bold"
+      >
+        <channel-item
+          v-for="channel in invitedChannels"
+          :key="channel.id"
+          :channel="channel"
+          :is-active="channel.id === currentChannelId"
+          :is-admin="channel.adminId === currentUserId"
+          :invited="true"
+          @select="selectChannel"
+          @leave="leaveChannel"
+          @delete="deleteChannel"
+        />
+      </q-expansion-item>
+
         <!-- Public Channels -->
         <q-expansion-item
           v-if="publicChannels.length > 0"
@@ -70,6 +91,7 @@
             :channel="channel"
             :is-active="channel.id === currentChannelId"
             :is-admin="channel.adminId === currentUserId"
+            :invited="false"
             @select="selectChannel"
             @leave="leaveChannel"
             @delete="deleteChannel"
@@ -90,6 +112,7 @@
             :channel="channel"
             :is-active="channel.id === currentChannelId"
             :is-admin="channel.adminId === currentUserId"
+            :invited="false"
             @select="selectChannel"
             @leave="leaveChannel"
             @delete="deleteChannel"
@@ -166,7 +189,12 @@ export default defineComponent({
   },
   props: {
     channels: {
-      type: Array as PropType<Array<Channel & { lastMessage?: string }>>,
+      type: Array as PropType<Array<Channel & {
+        lastMessage?: string
+        isMember?: boolean
+        isNewInvite?: boolean
+        unreadCount?: number
+      }>>,
       required: true,
     },
     currentChannelId: {
@@ -195,22 +223,36 @@ export default defineComponent({
     };
   },
   computed: {
-    filteredChannels(): Array<Channel & { lastMessage?: string }> {
-      if (!this.search) {
-        return this.channels;
-      }
-      const searchLower = this.search.toLowerCase();
-      return this.channels.filter((channel) => channel.name.toLowerCase().includes(searchLower));
-    },
-    publicChannels(): Array<Channel & { lastMessage?: string }> {
-      return this.filteredChannels.filter((channel) => !channel.isPrivate);
-    },
-    privateChannels(): Array<Channel & { lastMessage?: string }> {
-      return this.filteredChannels.filter((channel) => channel.isPrivate);
-    },
-    isValidChannelName(): boolean {
-      return this.newChannel.name.length >= 3 && /^[a-zA-Z0-9_-]+$/.test(this.newChannel.name);
-    },
+  filteredChannels(): Array<Channel & { lastMessage?: string; isMember?: boolean; isNewInvite?: boolean }> {
+    const list = this.search
+      ? this.channels.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase()))
+      : this.channels
+    return list
+  },
+
+  // default: ak isMember nie je zadané, ber ho ako true
+  baseVisible(): Array<Channel & { isMember?: boolean; isNewInvite?: boolean }> {
+    return this.filteredChannels.filter(c => (c.isMember !== false) || c.isNewInvite === true)
+  },
+
+  invitedChannels() {
+    return [...this.baseVisible].filter(c => c.isNewInvite === true)
+      .sort((a,b) => a.name.localeCompare(b.name))
+  },
+
+  publicChannels() {
+    return [...this.baseVisible].filter(c => !c.isPrivate && c.isNewInvite !== true)
+      .sort((a,b) => a.name.localeCompare(b.name))
+  },
+
+  privateChannels() {
+    return [...this.baseVisible].filter(c =>  c.isPrivate && c.isNewInvite !== true)
+      .sort((a,b) => a.name.localeCompare(b.name))
+  },
+
+  isValidChannelName(): boolean {
+    return this.newChannel.name.length >= 3 && /^[a-zA-Z0-9_-]+$/.test(this.newChannel.name)
+  },
   },
   methods: {
     selectChannel(channel: Channel): void {
@@ -265,7 +307,9 @@ export default defineComponent({
           this.$emit('channel-deleted', channel);
         });
     },
+
   },
+
 });
 </script>
 
