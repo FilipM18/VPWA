@@ -59,7 +59,9 @@ export const mockChannels: Channel[] = [
     adminId: 1,
     createdAt: new Date('2025-10-20T10:00:00.000Z'),
     lastActivityAt: new Date('2025-10-21T16:02:15.000Z'),
-    unreadCount: 0
+    unreadCount: 0,
+    isMember: true,
+    isNewInvite: false
   },
   {
     id: 2,
@@ -68,7 +70,9 @@ export const mockChannels: Channel[] = [
     adminId: 1,
     createdAt: new Date('2025-10-20T10:05:00.000Z'),
     lastActivityAt: new Date('2025-10-20T15:30:00.000Z'),
-    unreadCount: 3
+    unreadCount: 3,
+    isMember: true,
+    isNewInvite: false
   },
   {
     id: 3,
@@ -77,7 +81,9 @@ export const mockChannels: Channel[] = [
     adminId: 1,
     createdAt: new Date('2025-10-20T11:00:00.000Z'),
     lastActivityAt: new Date('2025-10-21T14:20:00.000Z'),
-    unreadCount: 0
+    unreadCount: 0,
+    isMember: true,
+    isNewInvite: false
   },
   {
     id: 4,
@@ -86,6 +92,19 @@ export const mockChannels: Channel[] = [
     adminId: 2,
     createdAt: new Date('2025-10-20T12:00:00.000Z'),
     lastActivityAt: new Date('2025-10-21T09:00:00.000Z'),
-    unreadCount: 5
-  }
+    unreadCount: 5,
+    isMember: true,
+    isNewInvite: false
+  },
+{
+    id: 5,
+    name: 'design-review',
+    isPrivate: true,
+    adminId: 2,
+    createdAt: new Date('2025-10-20T12:00:00.000Z'),
+    lastActivityAt: new Date('2025-10-21T09:00:00.000Z'),
+    isMember: false,
+    isNewInvite: true }
+
+
 ]

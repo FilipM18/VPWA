@@ -29,6 +29,12 @@
           />
         </q-toolbar-title>
 
+        <!-- Typing Indicator Component will go here -->
+        <typing-indicator
+          v-if="typingUsers.length > 0"
+          :users="typingUsers"
+        />
+
         <q-space />
 
         <!-- Members Toggle -->
@@ -49,13 +55,14 @@
     </q-header>
 
     <!-- Left Drawer - Channels -->
+
     <q-drawer
       v-model="leftDrawerOpen"
       bordered
       :behavior="$q.screen.lt.sm ? 'mobile' : 'default'"
       :show-if-above="$q.screen.gt.lg"
       :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
-      :breakpoint="1024"
+      :breakpoint="600"
     >
       <div class="column full-height">
         <!-- Channel List - takes available space -->
@@ -89,7 +96,7 @@
       bordered
       :behavior="$q.screen.lt.sm ? 'mobile' : 'default'"
       :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
-      :breakpoint="1024"
+      :breakpoint="600"
     >
       <member-list :members="members" :is-admin="isChannelAdmin" @close="$q.screen.lt.md && (rightDrawerOpen = false)" />
     </q-drawer>
@@ -111,7 +118,7 @@
           <div class="text-h6 text-grey-7 q-mt-md">Vyber kanál na začatie konverzácie</div>
         </div>
       </q-page>
-      
+
       <!-- Loading state -->
       <q-page v-else class="flex flex-center">
         <q-spinner color="primary" size="50px" />
@@ -123,9 +130,10 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import ChannelList from '../components/ChannelList.vue';
+import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
-import type { Channel, User, UserStatus, ChatMessage } from '../types';
+import type { Channel, User, UserStatus, ChatMessage, TypingIndicator as TypingIndicatorType } from '../types';
 import { mockUsers, mockChannels } from '../utils/mockData';
 
 type ChannelWithMeta = Channel & {
@@ -135,6 +143,7 @@ type ChannelWithMeta = Channel & {
 export default defineComponent({
   name: 'MainLayout',
   components: {
+    TypingIndicator: TypingIndicatorChip,
     ChannelList,
     MemberList,
     UserStatusMenu
@@ -147,6 +156,7 @@ export default defineComponent({
       channels: [] as ChannelWithMeta[],
       currentChannelId: null as number | null,
       members: [] as User[],
+      typingUsers: [] as TypingIndicatorType[],
     };
   },
   computed: {
@@ -175,17 +185,17 @@ export default defineComponent({
       return this.members.length;
     },
     drawerWidth(): number {
-    return this.$q.screen.gt.lg ? 300
-         : this.$q.screen.gt.md ? 280
+    return this.$q.screen.gt.lg ? 400
+         : this.$q.screen.gt.md ? 360
          : 260
     }
   },
   watch: {
     leftDrawerOpen(v: boolean) {
-      if (v && this.$q.screen.lt.sm) this.rightDrawerOpen = false
+      if (v && this.$q.screen.lt.md) this.rightDrawerOpen = false
     },
     rightDrawerOpen(v: boolean) {
-      if (v && this.$q.screen.lt.sm) this.leftDrawerOpen = false
+      if (v && this.$q.screen.lt.md) this.leftDrawerOpen = false
       },
     currentChannelId(newId: number | null) {
       if (newId) {

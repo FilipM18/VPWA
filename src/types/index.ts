@@ -28,6 +28,7 @@ export interface Channel {
   lastActivityAt: Date
   unreadCount?: number
   isNewInvite?: boolean
+  isMember?: boolean
 }
 
 export interface ChannelMember {
