@@ -191,7 +191,6 @@ export default defineComponent({
     channels: {
       type: Array as PropType<Array<Channel & {
         lastMessage?: string
-        isMember?: boolean
         isNewInvite?: boolean
         unreadCount?: number
       }>>,
@@ -223,21 +222,20 @@ export default defineComponent({
     };
   },
   computed: {
-  filteredChannels(): Array<Channel & { lastMessage?: string; isMember?: boolean; isNewInvite?: boolean }> {
+  filteredChannels(): Array<Channel & { lastMessage?: string; isNewInvite?: boolean }> {
     const list = this.search
       ? this.channels.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase()))
       : this.channels
     return list
   },
 
-  // default: ak isMember nie je zadané, ber ho ako true
-  baseVisible(): Array<Channel & { isMember?: boolean; isNewInvite?: boolean }> {
-    return this.filteredChannels.filter(c => (c.isMember !== false) || c.isNewInvite === true)
+  baseVisible(): Array<Channel & {isNewInvite?: boolean }> {
+    return this.filteredChannels
   },
 
   invitedChannels() {
     return [...this.baseVisible].filter(c => c.isNewInvite === true)
-      .sort((a,b) => a.name.localeCompare(b.name))
+      .sort((a,b) => new Date(b.invitedAt ?? 0).getTime() - new Date(a.invitedAt ?? 0).getTime())
   },
 
   publicChannels() {

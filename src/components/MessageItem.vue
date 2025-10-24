@@ -65,18 +65,6 @@
           </q-btn>
 
           <q-btn
-            flat
-            dense
-            round
-            :size="$q.screen.lt.sm ? 'xs' : 'sm'"
-            icon="content_copy"
-            color="grey-7"
-            @click="$emit('copy', message)"
-          >
-            <q-tooltip>Kopírovať</q-tooltip>
-          </q-btn>
-
-          <q-btn
             v-if="isOwn"
             flat
             dense

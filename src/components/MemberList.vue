@@ -6,7 +6,7 @@
       <q-toolbar-title> Členovia ({{ totalMembers }}) </q-toolbar-title>
 
       <!-- Close button for mobile -->
-      <q-btn flat dense round  :hidden="!$q.screen.lt.sm" icon="close" class="mobile-close-btn" @click="$emit('close')">
+      <q-btn v-show="$q.screen.lt.sm" flat dense round icon="close" @click="$emit('close')">
         <q-tooltip>Zavrieť</q-tooltip>
       </q-btn>
     </q-toolbar>
