@@ -1,17 +1,30 @@
 <template>
-  <div
-    :class="[
-      'q-mb-md',
-      'rounded-borders',
-      'q-pa-sm',
-      'transition',
-      'relative-position',
-      { 'own': isOwn, 'someone': !isOwn, 'mentioned': isMentioned }
-    ]"
-    :style="[hoverStyle, bubbleStyle]"
-    @mouseenter="onMouseEnter"
-    @mouseleave="onMouseLeave"
-  >
+  <div>
+    <!-- System Message -->
+    <div
+      v-if="message.isSystem"
+      class="text-center q-py-sm"
+    >
+      <span class="text-caption text-grey-7">
+        {{ message.content }}
+      </span>
+    </div>
+
+    <!-- Regular Message -->
+    <div
+      v-else
+      :class="[
+        'q-mb-md',
+        'rounded-borders',
+        'q-pa-sm',
+        'transition',
+        'relative-position',
+        { 'own': isOwn, 'someone': !isOwn, 'mentioned': isMentioned }
+      ]"
+      :style="[hoverStyle, bubbleStyle]"
+      @mouseenter="onMouseEnter"
+      @mouseleave="onMouseLeave"
+    >
     <!-- Message Header -->
     <div class="row items-center no-wrap q-mb-xs">
       <q-avatar
@@ -112,6 +125,7 @@
       label="Bol si spomenutý"
       class="q-ml-lg q-mt-xs"
     />
+    </div>
   </div>
 </template>
 

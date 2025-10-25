@@ -4,7 +4,7 @@
       <q-avatar :color="avatarColor" text-color="white" size="36px">
         {{ member.nickName.charAt(0).toUpperCase() }}
         <q-badge v-if="member.status === 'online'" color="positive" floating rounded />
-        <q-badge v-else-if="member.status === 'dnd'" color="warning" floating rounded />
+        <q-badge v-else-if="member.status === 'dnd'" color="red" floating rounded />
       </q-avatar>
     </q-item-section>
 

@@ -50,6 +50,8 @@ export interface Message {
   mentionedUserIds?: number[]
   mentionsMe?: boolean
   editedAt?: Date
+  isSystem?: boolean
+  systemType?: 'user_joined' | 'user_left' | 'user_invited' | 'kick_vote_started' | 'kick_vote_ended' | 'user_kicked'
 }
 
 export interface MessageReaction {
