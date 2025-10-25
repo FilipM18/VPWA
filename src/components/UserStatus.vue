@@ -1,6 +1,7 @@
 <template>
   <div class="q-pa-sm bg-grey-2">
-    <q-btn flat no-caps class="full-width" :padding="$q.screen.lt.sm ? '8px 8px' : '8px 12px'">
+    <div class="row items-center no-wrap">
+    <q-btn flat no-caps class="col" :padding="$q.screen.lt.sm ? '8px 8px' : '8px 12px'">
       <div class="row items-center no-wrap full-width">
         <q-avatar size="40px">
           <div
@@ -27,8 +28,6 @@
         </div>
 
         <q-space />
-
-        <q-icon name="settings" size="20px" class="text-grey-6" />
       </div>
 
       <q-menu transition-show="jump-down" transition-hide="jump-up">
@@ -93,6 +92,18 @@
 
           <q-separator />
 
+          <q-item clickable v-ripple v-close-popup @click="openSettings">
+            <q-item-section avatar>
+              <q-icon name="settings" color="primary" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>Nastavenia</q-item-label>
+              <q-item-label caption>Profil, bezpečnosť a notifikácie</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator />
+
           <!-- Logout -->
           <q-item clickable v-ripple @click="handleLogout">
             <q-item-section avatar>
@@ -104,6 +115,19 @@
       </q-card>
     </q-menu>
     </q-btn>
+
+     <q-btn
+        flat
+        dense
+        round
+        icon="settings"
+        size="md"
+        class="text-grey-6 q-mr-md"
+        @click="openSettings"
+      >
+        <q-tooltip>Nastavenia</q-tooltip>
+      </q-btn>
+    </div>
   </div>
 </template>
 
@@ -208,6 +232,9 @@ export default defineComponent({
         .onOk(() => {
           this.$emit('logout')
         })
+    },
+    openSettings(): void {
+      this.$router.push('/settings').catch(() => {});
     }
   }
 })

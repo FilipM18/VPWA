@@ -75,7 +75,7 @@
           />
         </div>
 
-        <!-- User Status - fixed at bottom -->
+        <!-- User Status -->
         <q-separator />
         <div class="col-auto bg-white">
           <user-status-menu

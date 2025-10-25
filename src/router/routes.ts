@@ -13,6 +13,17 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
+  {
+    path: '/settings',
+    component: () => import('layouts/SettingsLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/SettingsPage.vue')
+      }
+    ]
+  },
   { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
 ]
 

@@ -24,17 +24,17 @@ export interface Channel {
   name: string
   isPrivate: boolean
   adminId: number
-  createdAt: Date
-  lastActivityAt: Date
+  createdAt: Date | string
+  lastActivityAt: Date | string
   unreadCount?: number
   isNewInvite?: boolean
-  isMember?: boolean
+  invitedAt?: string
 }
 
 export interface ChannelMember {
   channelId: number
   userId: number
-  joinedAt: Date
+  joinedAt: Date | string
   kickVotes?: number
   isBanned?: boolean
 }
@@ -121,4 +121,14 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: User
   token: string
+}
+
+export interface NotificationPreferences {
+  mentionsOnly: boolean
+  enableDndMode: boolean
+  newMessages?: boolean
+  directMessages?: boolean
+  channelInvites?: boolean
+  soundEnabled?: boolean
+  soundVolume?: number
 }

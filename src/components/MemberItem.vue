@@ -27,13 +27,6 @@
               <q-item-section>@Spomenúť</q-item-section>
             </q-item>
 
-            <q-item clickable @click="$emit('message', member)">
-              <q-item-section avatar>
-                <q-icon name="message" size="sm" />
-              </q-item-section>
-              <q-item-section>Súkromná správa</q-item-section>
-            </q-item>
-
             <template v-if="isAdmin">
               <q-separator />
               <q-item clickable @click="$emit('kick', member)" class="text-negative">
@@ -74,7 +67,7 @@ export default defineComponent({
       default: true,
     },
   },
-  emits: ['kick', 'mention', 'message', 'view-profile'],
+  emits: ['kick', 'mention', 'view-profile'],
   computed: {
     itemClasses(): Array<string | Record<string, boolean>> {
       return [
