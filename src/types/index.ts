@@ -92,6 +92,7 @@ export interface TypingIndicator {
   nickName: string
   isTyping: boolean
   messagePreview?: string
+  avatarUrl?: string
 }
 
 export interface Notification {

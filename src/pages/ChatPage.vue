@@ -38,6 +38,7 @@
                 :message="item.data"
                 :is-own="item.data.authorId === currentUserId"
                 :current-user-id="currentUserId"
+                :users="members"
               />
             </template>
           </div>
@@ -131,9 +132,9 @@ export default defineComponent({
       messages: [] as ChatMessage[],
       showAllTypingUsers: false,
       typingUsers: [
-        { channelId: 1, userId: 1, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...' },
-        { channelId: 1, userId: 2, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?' },
-        { channelId: 1, userId: 3, nickName: 'Marek', isTyping: true, messagePreview: 'Pridám sa k vám...' }
+        { channelId: 1, userId: 5, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...', avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg' },
+        { channelId: 1, userId: 1, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?', avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg' },
+        { channelId: 1, userId: 3, nickName: 'Peter', isTyping: true, messagePreview: 'Pridám sa k vám...', avatarUrl: 'https://cdn.quasar.dev/img/avatar3.jpg' }
       ],
     }
   },

@@ -11,7 +11,7 @@ export const mockUsers: User[] = [
     nickName: 'janko_novak',
     email: 'jan.novak@example.com',
     status: 'online',
-    avatarUrl: ''
+    avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg'
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ export const mockUsers: User[] = [
     nickName: 'maria_kovacova',
     email: 'maria.kovacova@example.com',
     status: 'online',
-    avatarUrl: ''
+    avatarUrl: 'https://cdn.quasar.dev/img/avatar2.jpg'
   },
   {
     id: 3,
@@ -29,7 +29,7 @@ export const mockUsers: User[] = [
     nickName: 'peter_horvath',
     email: 'peter.horvath@example.com',
     status: 'dnd',
-    avatarUrl: ''
+    avatarUrl: 'https://cdn.quasar.dev/img/avatar3.jpg'
   },
   {
     id: 4,
@@ -38,7 +38,7 @@ export const mockUsers: User[] = [
     nickName: 'lukas_varga',
     email: 'lukas.varga@example.com',
     status: 'online',
-    avatarUrl: ''
+    avatarUrl: 'https://cdn.quasar.dev/img/avatar4.jpg'
   },
   {
     id: 5,
@@ -47,7 +47,7 @@ export const mockUsers: User[] = [
     nickName: 'eva_malinkova',
     email: 'eva.malinkova@example.com',
     status: 'offline',
-    avatarUrl: ''
+    avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg'
   }
 ]
 
