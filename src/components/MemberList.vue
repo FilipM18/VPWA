@@ -5,6 +5,20 @@
       <q-icon name="group" class="q-mr-sm" />
       <q-toolbar-title> Členovia ({{ totalMembers }}) </q-toolbar-title>
 
+      <!-- Vote Kick Button -->
+      <q-btn
+        v-if="activeVoteKicks.length > 0"
+        flat
+        dense
+        round
+        icon="how_to_vote"
+        color="warning"
+        @click="showVoteKickDialog = true"
+      >
+        <q-badge color="red" floating>{{ activeVoteKicks.length }}</q-badge>
+        <q-tooltip>Aktívne hlasovania ({{ activeVoteKicks.length }})</q-tooltip>
+      </q-btn>
+
       <!-- Close button for mobile -->
       <q-btn v-show="$q.screen.lt.sm" flat dense round icon="close" @click="$emit('close')">
         <q-tooltip>Zavrieť</q-tooltip>
@@ -47,7 +61,7 @@
         <!-- DND Members -->
         <template v-if="dndMembers.length > 0">
           <q-item-label header class="text-weight-bold q-mt-md">
-            <q-icon name="do_not_disturb_on" color="warning" size="xs" class="q-mr-xs" />
+            <q-icon name="do_not_disturb_on" color="red" size="xs" class="q-mr-xs" />
             Nerušiť ({{ dndMembers.length }})
           </q-item-label>
 
@@ -73,7 +87,6 @@
             :member="member"
             :is-admin="isAdmin"
             :is-current-user="member.id === currentUserId"
-            :show-actions="false"
           />
         </template>
 
@@ -86,6 +99,59 @@
         </div>
       </q-list>
     </q-scroll-area>
+
+    <!-- Vote Kick Dialog -->
+    <q-dialog v-model="showVoteKickDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">
+            <q-icon name="how_to_vote" color="warning" class="q-mr-sm" />
+            Aktívne hlasovania
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <q-list separator>
+            <q-item v-for="vote in activeVoteKicks" :key="vote.userId">
+              <q-item-section avatar>
+                <q-avatar color="grey" text-color="white">
+                  {{ vote.userName.charAt(0).toUpperCase() }}
+                </q-avatar>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label>{{ vote.userName }}</q-item-label>
+                <q-item-label caption>
+                  Hlasovali: {{ vote.votes }}/{{ vote.required }}
+                </q-item-label>
+                <q-linear-progress
+                  :value="vote.votes / vote.required"
+                  color="warning"
+                  class="q-mt-xs"
+                />
+              </q-item-section>
+
+              <q-item-section side>
+                <q-btn
+                  v-if="!vote.hasVoted"
+                  flat
+                  dense
+                  color="warning"
+                  label="Hlasovať"
+                  @click="voteForKick(vote)"
+                />
+                <q-chip v-else color="grey" text-color="white" dense>
+                  <q-icon name="check" size="xs" class="q-mr-xs" />
+                  Hlasovali ste
+                </q-chip>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -93,6 +159,7 @@
 import { defineComponent, type PropType } from 'vue';
 import MemberItem from './MemberItem.vue';
 import type { User, UserStatus } from '../types';
+import { mockUsers } from '../utils/mockData';
 
 export default defineComponent({
   name: 'MemberList',
@@ -117,6 +184,31 @@ export default defineComponent({
   data() {
     return {
       search: '',
+      mockUsers,
+      showVoteKickDialog: false,
+      activeVoteKicks: [
+        {
+          userId: 6,
+          userName: 'Tomáš Kováč',
+          votes: 1,
+          required: 3,
+          hasVoted: false,
+        },
+                {
+          userId: 6,
+          userName: 'Tomáš Kováč',
+          votes: 1,
+          required: 3,
+          hasVoted: false,
+        },
+                {
+          userId: 6,
+          userName: 'Tomáš Kováč',
+          votes: 1,
+          required: 3,
+          hasVoted: false,
+        }
+      ],
     };
   },
   computed: {
@@ -172,6 +264,44 @@ export default defineComponent({
         default:
           return 'Neznámy';
       }
+    },
+    voteForKick(vote: { userId: number; userName: string; votes: number; required: number; hasVoted: boolean }): void {
+      this.$q.dialog({
+        title: 'Potvrdiť hlasovanie',
+        message: `Naozaj chcete hlasovať za vyhodenie používateľa ${vote.userName}?`,
+        cancel: {
+          label: 'Zrušiť',
+          flat: true,
+        },
+        ok: {
+          label: 'Hlasovať',
+          color: 'warning',
+        },
+      }).onOk(() => {
+        // Update the vote
+        vote.hasVoted = true;
+        vote.votes++;
+        
+        this.$q.notify({
+          type: 'positive',
+          message: `Hlasovali ste za vyhodenie používateľa ${vote.userName}.`,
+          position: 'top',
+        });
+
+        // Check if vote passed
+        if (vote.votes >= vote.required) {
+          this.$q.notify({
+            type: 'warning',
+            message: `Hlasovanie o vyhodení používateľa ${vote.userName} bolo úspešné!`,
+            position: 'top',
+          });
+          // Remove from active votes
+          const index = this.activeVoteKicks.findIndex(v => v.userId === vote.userId);
+          if (index > -1) {
+            this.activeVoteKicks.splice(index, 1);
+          }
+        }
+      });
     },
   },
 });

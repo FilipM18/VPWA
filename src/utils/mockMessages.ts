@@ -7,6 +7,16 @@ export const mockMessages: ChatMessage[] = [
   {
     id: 1,
     channelId: 1,
+    authorId: 0,
+    author: 'system',
+    content: 'Eva Málínková sa pripojila do kanála',
+    timestamp: new Date('2025-10-21T08:00:00.000Z'),
+    isSystem: true,
+    systemType: 'user_joined'
+  },
+  {
+    id: 2,
+    channelId: 1,
     authorId: 1,
     author: 'janko_novak',
     content: 'Ahoj všetci! Vitajte v našom novom ChatFlow kanáli 🎉',
@@ -18,7 +28,7 @@ export const mockMessages: ChatMessage[] = [
     ]
   },
   {
-    id: 2,
+    id: 3,
     channelId: 1,
     authorId: 2,
     author: 'maria_kovacova',
@@ -122,6 +132,26 @@ export const mockMessages: ChatMessage[] = [
   {
     id: 12,
     channelId: 1,
+    authorId: 0,
+    author: 'system',
+    content: 'Lukáš Varga pozval používateľa Tomáš Kováč do kanála',
+    timestamp: new Date('2025-10-21T12:50:00.000Z'),
+    isSystem: true,
+    systemType: 'user_invited'
+  },
+  {
+    id: 13,
+    channelId: 1,
+    authorId: 0,
+    author: 'system',
+    content: 'Tomáš Kováč sa pripojil do kanála',
+    timestamp: new Date('2025-10-21T12:51:00.000Z'),
+    isSystem: true,
+    systemType: 'user_joined'
+  },
+  {
+    id: 14,
+    channelId: 1,
     authorId: 2,
     author: 'maria_kovacova',
     content: 'Perfektné! Už sa teším na prácu na tomto projekte 🚀',
@@ -133,7 +163,7 @@ export const mockMessages: ChatMessage[] = [
     ]
   },
   {
-    id: 13,
+    id: 15,
     channelId: 1,
     authorId: 4,
     author: 'lukas_varga',
@@ -141,7 +171,7 @@ export const mockMessages: ChatMessage[] = [
     timestamp: new Date('2025-10-21T14:15:00.000Z')
   },
   {
-    id: 14,
+    id: 16,
     channelId: 1,
     authorId: 5,
     author: 'eva_malinkova',
@@ -153,7 +183,7 @@ export const mockMessages: ChatMessage[] = [
     ]
   },
   {
-    id: 15,
+    id: 17,
     channelId: 1,
     authorId: 1,
     author: 'janko_novak',
@@ -162,7 +192,17 @@ export const mockMessages: ChatMessage[] = [
     mentionedUserIds: [5]
   },
   {
-    id: 16,
+    id: 18,
+    channelId: 1,
+    authorId: 0,
+    author: 'system',
+    content: 'Peter Horváth začal hlasovanie o vyhodení používateľa Tomáš Kováč',
+    timestamp: new Date('2025-10-21T14:45:00.000Z'),
+    isSystem: true,
+    systemType: 'kick_vote_started'
+  },
+  {
+    id: 19,
     channelId: 1,
     authorId: 3,
     author: 'peter_horvath',
@@ -170,7 +210,7 @@ export const mockMessages: ChatMessage[] = [
     timestamp: new Date('2025-10-21T15:30:00.000Z')
   },
   {
-    id: 17,
+    id: 20,
     channelId: 1,
     authorId: 4,
     author: 'lukas_varga',
@@ -182,7 +222,7 @@ export const mockMessages: ChatMessage[] = [
     ]
   },
   {
-    id: 18,
+    id: 21,
     channelId: 1,
     authorId: 3,
     author: 'peter_horvath',
@@ -190,7 +230,17 @@ export const mockMessages: ChatMessage[] = [
     timestamp: new Date('2025-10-21T15:33:30.000Z')
   },
   {
-    id: 19,
+    id: 22,
+    channelId: 1,
+    authorId: 0,
+    author: 'system',
+    content: 'Hlasovanie o vyhodení používateľa Tomáš Kováč bolo ukončené. Používateľ zostáva v kanáli.',
+    timestamp: new Date('2025-10-21T15:45:00.000Z'),
+    isSystem: true,
+    systemType: 'kick_vote_ended'
+  },
+  {
+    id: 23,
     channelId: 1,
     authorId: 2,
     author: 'maria_kovacova',
@@ -198,7 +248,7 @@ export const mockMessages: ChatMessage[] = [
     timestamp: new Date('2025-10-21T16:00:00.000Z')
   },
   {
-    id: 20,
+    id: 24,
     channelId: 1,
     authorId: 1,
     author: 'janko_novak',
@@ -211,7 +261,7 @@ export const mockMessages: ChatMessage[] = [
     ]
   },
   {
-    id: 21,
+    id: 25,
     channelId: 1,
     authorId: 2,
     author: 'maria_kovacova',
