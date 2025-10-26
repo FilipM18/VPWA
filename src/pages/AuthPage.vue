@@ -238,12 +238,12 @@ export default defineComponent({
 
     handleLogin () {
       console.log('login payload', this.loginForm)
-      this.$router.push('/chat').catch(() => {}) // alebo { name: 'chat' } ak používaš pomenovanú route
+      this.$router.push('/chat').catch(() => {}) 
     },
 
     handleRegister () {
       console.log('register payload', this.registerForm)
-      this.$router.push('/chat').catch(() => {}) // alebo { name: 'chat' } ak používaš pomenovanú route
+      this.$router.push('/chat').catch(() => {})
     }
   }
 })
