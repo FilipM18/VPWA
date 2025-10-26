@@ -1,29 +1,44 @@
 <template>
-  <!-- Typing Indicator with q-chat-message and Stacked Avatars -->
+  <!-- Typing Indicator -->
   <q-chat-message
     v-if="users.length > 0"
-    :name="typingMessage"
     bg-color="grey-3"
+    text-color="grey-8"
     @click="handleClick"
     style="cursor: pointer;"
   >
+    <template v-slot:name>{{ typingMessage }}</template>
+    
     <template v-slot:avatar>
       <!-- Stacked Avatars for Multiple Typers -->
       <div class="avatar-stack">
-        <q-avatar
-          v-for="(user, index) in displayedUsers"
-          :key="user.userId"
-          size="40px"
-          :style="{ 
-            zIndex: displayedUsers.length - index,
-            marginLeft: index > 0 ? '-12px' : '0',
-            border: '2px solid white'
-          }"
-          class="stacked-avatar"
-        >
-          <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.nickName">
-          <span v-else>{{ user.nickName.charAt(0).toUpperCase() }}</span>
-        </q-avatar>
+        <template v-for="(user, index) in displayedUsers" :key="user.userId">
+          <img
+            v-if="user.avatarUrl"
+            class="q-message-avatar q-message-avatar--received stacked-avatar"
+            :src="user.avatarUrl"
+            :alt="user.nickName"
+            :style="{ 
+              zIndex: displayedUsers.length - index,
+              marginLeft: index > 0 ? '-12px' : '0',
+              border: '2px solid white'
+            }"
+          >
+          <q-avatar
+            v-else
+            :style="{ 
+              zIndex: displayedUsers.length - index,
+              marginLeft: index > 0 ? '-12px' : '0',
+              border: '2px solid white'
+            }"
+            class="stacked-avatar"
+            color="grey"
+            text-color="white"
+            size="40px"
+          >
+            {{ user.nickName.charAt(0).toUpperCase() }}
+          </q-avatar>
+        </template>
         
         <div 
           v-if="users.length > 3" 
@@ -77,11 +92,6 @@ export default defineComponent({
   methods: {
     handleClick() {
       this.$emit('showAll')
-    },
-    getAvatarColor(name: string): string {
-      const colors = ['purple', 'blue', 'green', 'orange', 'red', 'teal', 'pink', 'indigo']
-      const hash = name.split('').reduce((accumulator, character) => accumulator + character.charCodeAt(0), 0)
-      return colors[hash % colors.length] || 'primary'
     }
   }
 })
