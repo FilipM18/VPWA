@@ -13,7 +13,7 @@
           :scroll-target="scrollTarget || undefined"
           reverse
         >
-          <div class="row justify-center">
+          <div class="">
             <div
               class="col-xs-12 col-sm-12 col-md-10 col-lg-8 col-xl-7 q-pa-md"
               :class="$q.screen.lt.md ? 'q-pa-sm' : 'q-pa-md'"
@@ -46,6 +46,11 @@
                     :users="members"
                   />
                 </template>
+
+                <!-- Typing Indicator as a message -->
+                <div v-if="typingUsers.length > 0" class="q-mb-md">
+                  <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
+                </div>
               </div>
 
               <!-- Empty State -->
@@ -68,13 +73,6 @@
 
     <!-- Message Input at Bottom (Fixed) -->
     <div class="bottom-section">
-      <!-- Typing indicator -->
-      <q-slide-transition>
-        <div v-if="typingUsers.length > 0" class="bg-grey-2 q-pa-sm">
-          <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
-        </div>
-      </q-slide-transition>
-
       <q-separator />
       <message-input
         :current-user="currentUser"
