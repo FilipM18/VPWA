@@ -1,4 +1,4 @@
-<template>
+ <template>
   <div>
     <!-- System Message -->
     <div
@@ -10,128 +10,106 @@
       </span>
     </div>
 
-    <!-- Regular Message -->
-    <div
+    <!-- Regular Message using q-chat-message -->
+    <q-chat-message
       v-else
-      :class="[
-        'q-mb-md',
-        'rounded-borders',
-        'q-pa-sm',
-        'transition',
-        'relative-position',
-        { 'own': isOwn, 'someone': !isOwn, 'mentioned': isMentioned }
-      ]"
-      :style="[hoverStyle, bubbleStyle]"
+      :sent="isOwn"
+      :text-color="isOwn ? 'white' : 'black'"
+      :bg-color="messageBgColor"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
     >
-    <!-- Message Header -->
-    <div class="row items-center no-wrap q-mb-xs">
-      <q-avatar
-        :color="avatarColor"
-        text-color="white"
-        :size="$q.screen.lt.sm ? '32px' : '36px'"
-      >
-        {{ message.author.charAt(0).toUpperCase() }}
-      </q-avatar>
-
-      <div class="q-ml-sm">
-        <span :class="['text-weight-bold', $q.screen.lt.sm ? 'text-body2' : 'text-body1']">
-          {{ message.author }}
-        </span>
-        <q-badge
-          v-if="isOwn"
-          color="blue-grey-5"
-          label="ty"
-          class="q-ml-xs"
-        />
-        <span :class="['text-caption text-grey-7', $q.screen.lt.sm ? 'q-ml-xs' : 'q-ml-sm']">
-          {{ formatTime(message.timestamp) }}
-        </span>
-        <span
-          v-if="message.editedAt"
-          class="text-caption text-grey-6 q-ml-xs"
+      <template v-slot:name>{{ message.author }}</template>
+      <template v-slot:avatar>
+        <img
+          :class="isOwn ? 'q-message-avatar q-message-avatar--sent' : 'q-message-avatar q-message-avatar--received'"
+          :src="authorAvatar"
+          :alt="message.author"
         >
-          (upravené)
-        </span>
-      </div>
+      </template>
 
-      <q-space />
-
-      <!-- Message Actions -->
-      <q-slide-transition>
-        <div
-          v-show="showActions"
-          class="row no-wrap items-center"
-          :class="$q.screen.lt.sm ? 'q-gutter-x-xs' : 'q-gutter-x-sm'"
-        >
-          <q-btn
-            flat
-            dense
-            round
-            :size="$q.screen.lt.sm ? 'xs' : 'sm'"
-            icon="reply"
-            color="grey-7"
-            @click="$emit('reply', message)"
-          >
-            <q-tooltip>Odpovedať</q-tooltip>
-          </q-btn>
-
-          <q-btn
-            v-if="isOwn"
-            flat
-            dense
-            round
-            :size="$q.screen.lt.sm ? 'xs' : 'sm'"
-            icon="edit"
-            color="grey-7"
-            @click="$emit('edit', message)"
-          >
-            <q-tooltip>Upraviť</q-tooltip>
-          </q-btn>
-
-          <q-btn
-            v-if="isOwn"
-            flat
-            dense
-            round
-            :size="$q.screen.lt.sm ? 'xs' : 'sm'"
-            icon="delete"
-            color="negative"
-            @click="$emit('delete', message)"
-          >
-            <q-tooltip>Zmazať</q-tooltip>
-          </q-btn>
-        </div>
-      </q-slide-transition>
-    </div>
-
-    <!-- Message Content -->
-    <div
-      :class="[
-        'q-ml-lg q-pl-md',
-        $q.screen.lt.sm ? 'text-body2' : 'text-body1'
-      ]"
-      style="word-wrap: break-word; overflow-wrap: break-word; line-height: 1.6;"
-    >
+      <!-- Message Content -->
       <div v-html="formattedContent"></div>
 
-    </div>
+      <!-- Mention badge -->
+      <div v-if="message.mentionsMe" class="q-mt-xs">
+        <q-badge color="amber" text-color="amber-10" label="Bol si spomenutý" />
+      </div>
 
-    <q-badge
-      v-if="message.mentionsMe"
-      color="amber"
-      text-color="amber-10"
-      label="Bol si spomenutý"
-      class="q-ml-lg q-mt-xs"
-    />
-    </div>
+      <template v-slot:stamp>
+        <div class="row items-center no-wrap">
+          <span class="text-caption">{{ formatTime(message.timestamp) }}</span>
+          <span v-if="message.editedAt" class="text-caption text-grey-6 q-ml-xs">
+            (upravené)
+          </span>
+          
+          <!-- Message Actions on hover -->
+          <q-slide-transition>
+            <div
+              v-show="showActions"
+              class="message-actions absolute-top-right q-mt-xs q-mr-xs"
+            >
+              <q-btn
+                flat
+                dense
+                round
+                size="xs"
+                icon="reply"
+                color="grey-7"
+                @click.stop="$emit('reply', message)"
+              >
+                <q-tooltip>Odpovedať</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                v-if="isOwn"
+                flat
+                dense
+                round
+                size="xs"
+                icon="edit"
+                color="grey-7"
+                @click.stop="$emit('edit', message)"
+              >
+                <q-tooltip>Upraviť</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                flat
+                dense
+                round
+                size="xs"
+                icon="content_copy"
+                color="grey-7"
+                @click.stop="$emit('copy', message)"
+              >
+                <q-tooltip>Kopírovať</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                v-if="isOwn"
+                flat
+                dense
+                round
+                size="xs"
+                icon="delete"
+                color="negative"
+                @click.stop="$emit('delete', message)"
+              >
+                <q-tooltip>Vymazať</q-tooltip>
+              </q-btn>
+            </div>
+          </q-slide-transition>
+        </div>
+      </template>
+
+    </q-chat-message>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import type { ChatMessage } from '../types'
+import type { ChatMessage, User } from '../types'
 
 export default defineComponent({
   name: 'MessageItem',
@@ -151,6 +129,10 @@ export default defineComponent({
     currentUserNick: {
       type: String,
       default: ''
+    },
+    users: {
+      type: Array as PropType<User[]>,
+      default: () => []
     }
   },
   emits: ['reply', 'edit', 'delete', 'copy'],
@@ -161,6 +143,18 @@ export default defineComponent({
     }
   },
   computed: {
+    authorAvatar(): string {
+      // Ak máme users, nájdeme avatara podľa authorId
+      const author = this.users.find(u => u.id === this.message.authorId)
+      if (author?.avatarUrl) {
+        return author.avatarUrl
+      }
+      // Fallback - vygenerujeme avatar URL podľa avatarColor sem treba doplniť 
+      return '' 
+    },
+    formattedStamp(): string {
+      return this.formatTime(this.message.timestamp)
+    },
     isMentioned(): boolean {
       const byFlag = !!this.message.mentionsMe
       const ids = (this.message as ChatMessage & { mentionedUserIds?: number[] }).mentionedUserIds
@@ -189,13 +183,21 @@ export default defineComponent({
       const hash = this.message.author.split('').reduce((accumulator, character) => accumulator + character.charCodeAt(0), 0)
       return colors[hash % colors.length] || 'primary'
     },
+    messageBgColor(): string {
+      if (this.message.mentionsMe && !this.isOwn) {
+        return 'amber-1'
+      }
+      return this.isOwn ? 'primary' : 'grey-3'
+    },
     mentionedUsers(): string[] {
       const m = this.message.content.match(/@([A-Za-z0-9_]+)/g) || []
       return [...new Set(m.map(s=>s.slice(1)))]
     },
     formattedContent(): string {
       let content = this.escapeHtml(this.message.content)
-      content = content.replace(/@(\w+)/g, '<span class="text-primary text-weight-bold">@$1</span>')
+      // Pre vlastné správy použijeme svetlejšiu farbu pre mentions (text-amber-1), inak primary
+      const mentionClass = this.isOwn ? 'mention-own' : 'mention-other'
+      content = content.replace(/@(\w+)/g, `<span class="text-weight-bold ${mentionClass}">@$1</span>`)
       content = content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary">$1</a>')
       content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       content = content.replace(/\*([^*]+?)\*/g, '<em>$1</em>')
@@ -243,5 +245,20 @@ export default defineComponent({
 .mentioned:not(.own) {
   background: rgba(193,154,107,0.20);
   border-left: 3px solid #c19a6b;
+}
+/* Mention styling */
+.mention-own {
+  color: #fef3c7 !important; 
+  text-decoration: underline;
+}
+.mention-other {
+  color: #1976d2 !important; 
+}
+.message-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.q-chat-message:hover .message-actions {
+  opacity: 1;
 }
 </style>
