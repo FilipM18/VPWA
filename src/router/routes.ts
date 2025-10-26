@@ -24,6 +24,17 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
+  {
+  path: '/auth',
+  component: () => import('layouts/AuthLayout.vue'),
+  children: [
+    {
+      path: '',
+      name: 'auth',
+      component: () => import('pages/AuthPage.vue')
+    }
+  ]
+  },
   { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
 ]
 

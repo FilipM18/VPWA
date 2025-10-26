@@ -1,70 +1,79 @@
 <template>
-  <q-page class="column full-height bg-grey-1">
+  <q-page class="chat-page-container">
 
-    <!-- Messages Area -->
-    <div class="col overflow-hidden">
-      <!-- Messages Container -->
-      <div class="full-width q-pa-xl">
+    <!-- Messages Area with Scroll -->
+    <div class="messages-wrapper">
+      <q-scroll-area
+        ref="scrollArea"
+        class="messages-scroll-area"
+      >
         <q-infinite-scroll
+          :offset="250"
+          @load="onLoad"
+          :scroll-target="scrollTarget || undefined"
           reverse
         >
-          <div
-            class="col-xs-12 col-sm-12 col-md-10 col-lg-8 col-xl-7 q-pa-md"
-            :class="$q.screen.lt.md ? 'q-pa-sm' : 'q-pa-md'"
-          >
+          <div class="row justify-center">
+            <div
+              class="col-xs-12 col-sm-12 col-md-10 col-lg-8 col-xl-7 q-pa-md"
+              :class="$q.screen.lt.md ? 'q-pa-sm' : 'q-pa-md'"
+            >
+              <!-- Messages or Empty State -->
+              <div v-if="messages.length > 0">
+                <!-- Date Separators and Messages -->
+                <template v-for="(item, index) in messagesWithDates" :key="`item-${index}`">
+                  <!-- Date Separator -->
+                  <div
+                    v-if="item.type === 'date'"
+                    class="date-separator q-my-md"
+                  >
+                    <q-chip
+                      color="grey-4"
+                      text-color="grey-8"
+                      icon="event"
+                      square
+                    >
+                      {{ item.label }}
+                    </q-chip>
+                  </div>
 
-          <!-- Messages or Empty State -->
-          <div v-if="messages.length > 0">
-            <!-- Date Separators and Messages -->
-            <template v-for="(item, index) in messagesWithDates" :key="`item-${index}`">
-              <!-- Date Separator -->
-              <div
-                v-if="item.type === 'date'"
-                class="date-separator q-my-md"
-              >
-                <q-chip
-                  color="grey-4"
-                  text-color="grey-8"
-                  icon="event"
-                  square
-                >
-                  {{ item.label }}
-                </q-chip>
+                  <!-- Message Item -->
+                  <message-item
+                    v-else-if="item.type === 'message'"
+                    :message="item.data"
+                    :is-own="item.data.authorId === currentUserId"
+                    :current-user-id="currentUserId"
+                    :users="members"
+                  />
+                </template>
               </div>
 
-              <!-- Message Item -->
-              <message-item
-                v-else-if="item.type === 'message'"
-                :message="item.data"
-                :is-own="item.data.authorId === currentUserId"
-                :current-user-id="currentUserId"
-                :users="members"
-              />
-            </template>
+              <!-- Empty State -->
+              <div v-else class="text-center q-pa-xl">
+                <q-icon name="forum" size="80px" color="grey-5" />
+                <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
+                <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
+              </div>
+            </div>
           </div>
 
-          <!-- Empty State -->
-          <div v-else class="text-center q-pa-xl">
-            <q-icon name="forum" size="80px" color="grey-5" />
-            <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
-            <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
-          </div>
-          </div>
-      </q-infinite-scroll>
-      </div>
+          <template v-slot:loading>
+            <div class="row justify-center q-my-md">
+              <q-spinner-dots color="primary" size="40px" />
+            </div>
+          </template>
+        </q-infinite-scroll>
+      </q-scroll-area>
     </div>
 
-
-
-    <!-- Message Input at Bottom -->
-
-    <div class="col-auto bg-white absolute-bottom input-stick">
-       <!-- Typing indicator -->
-    <q-slide-transition>
-      <div v-if="typingUsers.length > 0" class="bg-grey-2 q-pa-sm">
-        <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
-      </div>
-    </q-slide-transition>
+    <!-- Message Input at Bottom (Fixed) -->
+    <div class="bottom-section">
+      <!-- Typing indicator -->
+      <q-slide-transition>
+        <div v-if="typingUsers.length > 0" class="bg-grey-2 q-pa-sm">
+          <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
+        </div>
+      </q-slide-transition>
 
       <q-separator />
       <message-input
@@ -95,6 +104,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
+import type { QScrollArea } from 'quasar'
 import MessageInput from '../components/MessageInput.vue'
 import type { User, ChatMessage } from '../types'
 import MessageItem from '../components/MessageItem.vue'
@@ -130,17 +140,28 @@ export default defineComponent({
   data() {
     return {
       messages: [] as ChatMessage[],
+      allMessages: [] as ChatMessage[],
+      scrollTarget: null as Element | null,
+      pageSize: 10,
+      nextIndex: 0,
+      loadingOlder: false,
       showAllTypingUsers: false,
       typingUsers: [
         { channelId: 1, userId: 5, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...', avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg' },
         { channelId: 1, userId: 1, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?', avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg' },
         { channelId: 1, userId: 3, nickName: 'Peter', isTyping: true, messagePreview: 'Pridám sa k vám...', avatarUrl: 'https://cdn.quasar.dev/img/avatar3.jpg' }
-      ],
+      ]
     }
   },
   mounted() {
-    // Load mock messages - timestamps are already Date objects
-    this.messages = mockMessages
+    void this.$nextTick(() => {
+      const scrollArea = this.$refs.scrollArea as QScrollArea | undefined
+      if (scrollArea) {
+        const target = scrollArea.getScrollTarget()
+        this.scrollTarget = target
+        scrollArea.setScrollPosition('vertical', target.scrollHeight, 0)
+      }
+    })
   },
   computed: {
     currentUserId(): number {
@@ -165,9 +186,63 @@ export default defineComponent({
       return items
     }
   },
+  watch: {
+    channelId: {
+      immediate: true,
+      handler() {
+        this.initializeMessages()
+        void this.$nextTick(() => {
+          this.scrollToBottom(false)
+        })
+      }
+    }
+  },
   methods: {
+    initializeMessages(): void {
+      const filtered = mockMessages.filter(message => message.channelId === this.channelId)
+      const sorted = [...filtered].sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime()
+        const timeB = new Date(b.timestamp).getTime()
+        return timeA - timeB
+      })
+      this.allMessages = sorted
+      const total = sorted.length
+      const startIndex = Math.max(0, total - this.pageSize)
+      this.nextIndex = startIndex
+      this.messages = sorted.slice(startIndex)
+    },
+    onLoad(_index: number, done: (stop?: boolean) => void): void {
+      if (this.loadingOlder) {
+        done()
+        return
+      }
+      if (this.nextIndex <= 0) {
+        done(true)
+        return
+      }
+
+      const scrollArea = this.$refs.scrollArea as QScrollArea | undefined
+      const target = scrollArea?.getScrollTarget()
+      const previousHeight = target?.scrollHeight ?? 0
+
+      this.loadingOlder = true
+      const nextStart = Math.max(0, this.nextIndex - this.pageSize)
+      const older = this.allMessages.slice(nextStart, this.nextIndex)
+      this.messages = [...older, ...this.messages]
+      this.nextIndex = nextStart
+
+      void this.$nextTick(() => {
+        if (scrollArea && target) {
+          const newHeight = target.scrollHeight
+          const diff = newHeight - previousHeight
+          const currentPosition = target.scrollTop
+          scrollArea.setScrollPosition('vertical', currentPosition + diff, 0)
+        }
+        this.loadingOlder = false
+        done(this.nextIndex === 0)
+      })
+    },
     handleMessageSent(message: ChatMessage): void {
-      // toto zatial len príprava na pridanie správy do zoznamu
       const newMessage: ChatMessage = {
         ...message,
         id: this.messages.length + 1,
@@ -176,8 +251,12 @@ export default defineComponent({
         author: this.currentUser.nickName,
         timestamp: new Date()
       }
-      this.messages.push(newMessage)
+      this.allMessages = [...this.allMessages, newMessage]
+      this.messages = [...this.messages, newMessage]
       this.$emit('message-sent', newMessage)
+      void this.$nextTick(() => {
+        this.scrollToBottom()
+      })
     },
     openTypingDialog() {
       this.showAllTypingUsers = true
@@ -207,11 +286,53 @@ export default defineComponent({
         month: 'long',
         year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
       })
+    },
+    scrollToBottom(animated = true): void {
+      const scrollArea = this.$refs.scrollArea as QScrollArea | undefined
+      if (!scrollArea) {
+        return
+      }
+      const target = scrollArea.getScrollTarget()
+      scrollArea.setScrollPosition('vertical', target.scrollHeight, animated ? 300 : 0)
     }
   }
 })
 </script>
 
 <style scoped>
-  .input-stick { position: sticky; bottom: 0; z-index: 10; background: white; }
+/* Main container - uses flexbox to position messages area and input */
+.chat-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #f5f5f5;
+}
+
+/* Messages scroll area - takes all available space */
+.messages-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.messages-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Date separator styling */
+.date-separator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Fixed bottom section for typing indicator and input */
+.bottom-section {
+  flex: 0 0 auto;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
 </style>

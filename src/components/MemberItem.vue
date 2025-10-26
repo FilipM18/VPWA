@@ -1,8 +1,18 @@
 <template>
   <q-item clickable v-ripple @click="$emit('view-profile', member)" :class="itemClasses">
     <q-item-section avatar>
-      <q-avatar :color="avatarColor" text-color="white" size="36px">
-        {{ member.nickName.charAt(0).toUpperCase() }}
+      <q-avatar
+        :color="member.avatarUrl ? undefined : avatarColor"
+        text-color="white"
+        size="36px"
+      >
+        <template v-if="member.avatarUrl">
+          <img :src="member.avatarUrl" :alt="member.nickName" />
+        </template>
+        <template v-else>
+          {{ member.nickName.charAt(0).toUpperCase() }}
+        </template>
+
         <q-badge v-if="member.status === 'online'" color="positive" floating rounded />
         <q-badge v-else-if="member.status === 'dnd'" color="red" floating rounded />
       </q-avatar>
