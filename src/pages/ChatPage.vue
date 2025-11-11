@@ -49,7 +49,7 @@
 
                 <!-- Typing Indicator as a message -->
                 <div v-if="typingUsers.length > 0" class="q-mb-md">
-                  <TypingIndicator :users="typingUsers" @showAll="openTypingDialog" />
+                  <TypingIndicator :users="typingUsers" />
                 </div>
               </div>
 
@@ -81,22 +81,6 @@
         @message-sent="handleMessageSent"
       />
     </div>
-
-    <!-- Typing users dialog -->
-    <q-dialog v-model="showAllTypingUsers">
-      <q-card>
-        <q-card-section>
-          <div class="text-h6">Píšu tieto osoby:</div>
-          <div v-for="user in typingUsers" :key="user.userId" class="q-mt-sm">
-            <span class="text-weight-bold">{{ user.nickName }}:</span>
-            <span class="text-italic">{{ user.messagePreview }}</span>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Zavrieť" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
@@ -143,7 +127,6 @@ export default defineComponent({
       pageSize: 10,
       nextIndex: 0,
       loadingOlder: false,
-      showAllTypingUsers: false,
       typingUsers: [
         { channelId: 1, userId: 5, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...', avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg' },
         { channelId: 1, userId: 1, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?', avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg' },
@@ -255,9 +238,6 @@ export default defineComponent({
       void this.$nextTick(() => {
         this.scrollToBottom()
       })
-    },
-    openTypingDialog() {
-      this.showAllTypingUsers = true
     },
     formatDate(date: Date): string {
       const today = new Date()
