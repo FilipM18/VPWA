@@ -61,8 +61,10 @@
         <!-- DND Members -->
         <template v-if="dndMembers.length > 0">
           <q-item-label header class="text-weight-bold q-mt-md">
-            <q-icon name="do_not_disturb_on" color="red" size="xs" class="q-mr-xs" />
-            Nerušiť ({{ dndMembers.length }})
+            <q-badge color="red" rounded class="dnd-icon-badge">
+              <q-icon name="remove" size="8px" color="white" />
+            </q-badge>
+            <span class="q-ml-xs">Nerušiť ({{ dndMembers.length }})</span>
           </q-item-label>
 
           <member-item
@@ -307,3 +309,56 @@ export default defineComponent({
 });
 </script>
 
+<style scoped>
+.column {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.q-toolbar {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.q-toolbar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.q-pa-sm {
+  padding: 8px !important;
+}
+
+.q-input {
+  max-width: 100%;
+}
+
+.q-item {
+  max-width: 100%;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.q-item-section {
+  min-width: 0;
+}
+
+.q-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dnd-icon-badge {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+</style>

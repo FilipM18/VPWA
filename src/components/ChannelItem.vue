@@ -87,6 +87,28 @@ export default defineComponent({
 });
 </script>
 <style scoped>
-.invited { background: rgba(193,154,107,.20); border-left: 3px solid #c19a6b; }
-.q-item--active.invited { background: var(--q-primary); color:#fff; border-left-color: transparent; }
+.invited { 
+  background: rgba(193,154,107,.20); 
+  border-left: 3px solid #c19a6b; 
+}
+
+.q-item--active.invited { 
+  background: var(--q-primary); 
+  color:#fff; 
+  border-left-color: transparent; 
+}
+
+.q-item {
+  max-width: 100%;
+}
+
+.q-item-section {
+  min-width: 0;
+}
+
+.q-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>

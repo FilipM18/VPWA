@@ -123,7 +123,7 @@
 
     <!-- Create Channel Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
-      <q-card style="min-width: 600px; min-height: 350px;">
+      <q-card style="width: 100%; max-width: 600px; min-height: 350px;">
         <q-card-section>
           <div class="text-h6">Vytvoriť nový kanál</div>
         </q-card-section>
@@ -311,3 +311,65 @@ export default defineComponent({
 });
 </script>
 
+<style scoped>
+.channel-list-wrapper {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+.q-toolbar {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.q-toolbar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.q-pa-sm {
+  padding: 8px !important;
+}
+
+.q-input,
+.q-btn {
+  max-width: 100%;
+}
+
+.q-item {
+  max-width: 100%;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.q-item-section {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.q-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.q-list {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Ensure expansion items don't overflow */
+:deep(.q-expansion-item) {
+  max-width: 100%;
+}
+
+:deep(.q-expansion-item__container) {
+  max-width: 100%;
+}
+
+:deep(.q-item) {
+  max-width: 100%;
+}
+</style>

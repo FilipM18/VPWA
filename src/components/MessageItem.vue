@@ -20,11 +20,31 @@
     >
       <template v-slot:name>{{ message.author }}</template>
       <template v-slot:avatar>
-        <img
-          :class="isOwn ? 'q-message-avatar q-message-avatar--sent' : 'q-message-avatar q-message-avatar--received'"
-          :src="authorAvatar"
-          :alt="message.author"
-        >
+        <q-avatar size="40px">
+          <img
+            :src="authorAvatar"
+            :alt="message.author"
+          />
+          <q-badge
+            v-if="authorStatus === 'online'"
+            color="positive"
+            floating
+            rounded
+          />
+          <q-badge
+            v-else-if="authorStatus === 'dnd'"
+            color="red"
+            floating
+            rounded
+            class="status-badge"
+          >
+            <q-icon 
+              name="remove" 
+              size="8px" 
+              color="white"
+            />
+          </q-badge>
+        </q-avatar>
       </template>
 
       <template v-slot:stamp>
@@ -135,6 +155,10 @@ export default defineComponent({
       }
       return ''
     },
+    authorStatus(): string | undefined {
+      const author = this.users.find(u => u.id === this.message.authorId)
+      return author?.status
+    },
     messageBgColor(): string {
       if (this.message.mentionsMe && !this.isOwn) {
         return 'amber-1'
@@ -143,6 +167,18 @@ export default defineComponent({
     }
   },
   methods: {
+    getStatusColor(status: string): string {
+      switch (status) {
+        case 'online':
+          return 'positive'
+        case 'dnd':
+          return 'red'
+        case 'offline':
+          return 'grey'
+        default:
+          return 'grey'
+      }
+    },
     formatTime(timestamp: Date | string): string {
       const date = new Date(timestamp)
       return date.toLocaleTimeString('sk-SK', {
@@ -163,6 +199,30 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.status-badge {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 10 !important;
+}
+
+/* Ensure avatar container has higher z-index than message */
+:deep(.q-message-avatar) {
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+/* Ensure the badge floats properly */
+:deep(.q-avatar) {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
 /* Mention styling */
 :deep(.mention-own) {
   color: #fef3c7 !important; 
