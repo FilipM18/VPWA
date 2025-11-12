@@ -55,7 +55,10 @@
 
     <!-- Channels List -->
     <q-scroll-area class="col">
-      <q-list padding>
+      <q-list
+        class="q-px-0"  
+        padding
+      >
         <!-- Pozvánky -->
       <q-expansion-item
         v-if="invitedChannels.length > 0"
@@ -123,7 +126,7 @@
 
     <!-- Create Channel Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
-      <q-card style="min-width: 600px; min-height: 350px;">
+      <q-card style="width: 100%; max-width: 600px; min-height: 350px;">
         <q-card-section>
           <div class="text-h6">Vytvoriť nový kanál</div>
         </q-card-section>
@@ -310,4 +313,3 @@ export default defineComponent({
 
 });
 </script>
-

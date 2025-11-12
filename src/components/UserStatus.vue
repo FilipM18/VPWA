@@ -19,7 +19,15 @@
             :color="statusColor"
             floating
             rounded
-          />
+            class="status-indicator"
+          >
+            <q-icon 
+              v-if="userStatus === 'dnd'" 
+              name="remove" 
+              size="10px" 
+              color="white"
+            />
+          </q-badge>
         </q-avatar>
 
         <div class="q-ml-md text-left col ellipsis">
@@ -172,7 +180,7 @@ export default defineComponent({
           value: 'dnd',
           label: 'Nerušiť',
           icon: 'do_not_disturb_on',
-          color: 'warning',
+          color: 'red',
           description: 'Žiadne notifikácie'
         },
         {
@@ -194,7 +202,7 @@ export default defineComponent({
         case 'online':
           return 'positive'
         case 'dnd':
-          return 'warning'
+          return 'red'
         case 'offline':
           return 'grey'
         default:
@@ -239,3 +247,16 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped>
+.status-indicator {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+</style>

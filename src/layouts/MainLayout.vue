@@ -63,8 +63,9 @@
       :show-if-above="$q.screen.gt.lg"
       :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
       :breakpoint="600"
+      class="drawer-container"
     >
-      <div class="column full-height">
+      <div class="column full-height no-wrap">
         <!-- Channel List - takes available space -->
         <div class="col overflow-hidden">
           <channel-list
@@ -97,6 +98,7 @@
       :behavior="$q.screen.lt.sm ? 'mobile' : 'default'"
       :width="$q.screen.lt.sm ? $q.screen.width : drawerWidth"
       :breakpoint="600"
+      class="drawer-container"
     >
       <member-list :members="members" :is-admin="isChannelAdmin" @close="$q.screen.lt.md && (rightDrawerOpen = false)" />
     </q-drawer>
@@ -281,3 +283,13 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.drawer-container {
+  overflow-x: hidden !important;
+}
+
+.drawer-container :deep(.q-drawer__content) {
+  overflow-x: hidden !important;
+}
+</style>
