@@ -14,7 +14,9 @@
         </template>
 
         <q-badge v-if="member.status === 'online'" color="positive" floating rounded />
-        <q-badge v-else-if="member.status === 'dnd'" color="red" floating rounded />
+        <q-badge v-else-if="member.status === 'dnd'" color="red" floating rounded class="dnd-badge">
+          <q-icon name="remove" size="8px" color="white" />
+        </q-badge>
       </q-avatar>
     </q-item-section>
 
@@ -101,3 +103,16 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.dnd-badge {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+</style>

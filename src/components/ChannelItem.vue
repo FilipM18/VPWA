@@ -87,6 +87,14 @@ export default defineComponent({
 });
 </script>
 <style scoped>
-.invited { background: rgba(193,154,107,.20); border-left: 3px solid #c19a6b; }
-.q-item--active.invited { background: var(--q-primary); color:#fff; border-left-color: transparent; }
+.invited { 
+  background: rgba(193,154,107,.20); 
+  border-left: 3px solid #c19a6b; 
+}
+
+.q-item--active.invited { 
+  background: var(--q-primary); 
+  color:#fff; 
+  border-left-color: transparent; 
+}
 </style>
