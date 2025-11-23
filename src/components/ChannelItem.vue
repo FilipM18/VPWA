@@ -24,37 +24,65 @@
     </q-item-section>
 
     <q-item-section side>
-      <q-badge
-        v-if="channel.unreadCount && channel.unreadCount > 0"
-        color="red"
-        :label="channel.unreadCount"
-        class="q-mb-xs"
-      />
+      <div class="column items-end q-gutter-xs">
+        <q-badge
+          v-if="channel.unreadCount && channel.unreadCount > 0"
+          color="red"
+          :label="channel.unreadCount"
+        />
 
-      <q-icon v-if="invited" name="fiber_new" color="warning" size="sm" />
+        <q-icon v-if="invited && !isActive" name="fiber_new" color="warning" size="sm" />
 
-      <q-btn v-if="isActive" flat dense round icon="more_vert" size="sm" @click.stop>
-        <q-menu auto-close>
-          <q-list dense>
-            <q-item clickable @click="$emit('leave', channel)">
-              <q-item-section avatar>
-                <q-icon name="exit_to_app" />
-              </q-item-section>
-              <q-item-section>Opustiť</q-item-section>
-            </q-item>
+        <!-- Invitation Action Buttons -->
+        <div v-if="invited" class="row q-gutter-xs" @click.stop>
+          <q-btn
+            dense
+            round
+            flat
+            icon="check"
+            color="positive"
+            size="sm"
+            @click="$emit('accept', channel)"
+          >
+            <q-tooltip>Akceptovať</q-tooltip>
+          </q-btn>
+          <q-btn
+            dense
+            round
+            flat
+            icon="close"
+            color="negative"
+            size="sm"
+            @click="$emit('reject', channel)"
+          >
+            <q-tooltip>Odmietnuť</q-tooltip>
+          </q-btn>
+        </div>
 
-            <template v-if="isAdmin">
-              <q-separator />
-              <q-item clickable class="text-negative" @click="$emit('delete', channel)">
+        <!-- Regular Menu for Active Channels -->
+        <q-btn v-else-if="isActive" flat dense round icon="more_vert" size="sm" @click.stop>
+          <q-menu auto-close>
+            <q-list dense>
+              <q-item clickable @click="$emit('leave', channel)">
                 <q-item-section avatar>
-                  <q-icon name="delete" />
+                  <q-icon name="exit_to_app" />
                 </q-item-section>
-                <q-item-section>Zmazať</q-item-section>
+                <q-item-section>Opustiť</q-item-section>
               </q-item>
-            </template>
-          </q-list>
-        </q-menu>
-      </q-btn>
+
+              <template v-if="isAdmin">
+                <q-separator />
+                <q-item clickable class="text-negative" @click="$emit('delete', channel)">
+                  <q-item-section avatar>
+                    <q-icon name="delete" />
+                  </q-item-section>
+                  <q-item-section>Zmazať</q-item-section>
+                </q-item>
+              </template>
+            </q-list>
+          </q-menu>
+        </q-btn>
+      </div>
     </q-item-section>
   </q-item>
 </template>
@@ -83,18 +111,18 @@ export default defineComponent({
       default: false
     }
   },
-  emits: ['select', 'leave', 'delete'],
+  emits: ['select', 'leave', 'delete', 'accept', 'reject'],
 });
 </script>
 <style scoped>
-.invited { 
-  background: rgba(193,154,107,.20); 
-  border-left: 3px solid #c19a6b; 
+.invited {
+  background: rgba(193,154,107,.20);
+  border-left: 3px solid #c19a6b;
 }
 
-.q-item--active.invited { 
-  background: var(--q-primary); 
-  color:#fff; 
-  border-left-color: transparent; 
+.q-item--active.invited {
+  background: var(--q-primary);
+  color:#fff;
+  border-left-color: transparent;
 }
 </style>

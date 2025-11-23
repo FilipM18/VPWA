@@ -56,7 +56,7 @@
     <!-- Channels List -->
     <q-scroll-area class="col">
       <q-list
-        class="q-px-0"  
+        class="q-px-0"
         padding
       >
         <!-- Pozvánky -->
@@ -75,6 +75,8 @@
           :is-admin="channel.adminId === currentUserId"
           :invited="true"
           @select="selectChannel"
+          @accept="acceptInvite"
+          @reject="rejectInvite"
           @leave="leaveChannel"
           @delete="deleteChannel"
         />
@@ -208,7 +210,7 @@ export default defineComponent({
       default: null,
     },
   },
-  emits: ['channel-selected', 'channel-created', 'channel-left', 'channel-deleted', 'close'],
+  emits: ['channel-selected', 'channel-created', 'channel-left', 'channel-deleted', 'close', 'invitation-accepted', 'invitation-rejected'],
   data() {
     return {
       search: '',
@@ -307,6 +309,12 @@ export default defineComponent({
         .onOk(() => {
           this.$emit('channel-deleted', channel);
         });
+    },
+    acceptInvite(channel: Channel): void {
+      this.$emit('invitation-accepted', channel);
+    },
+    rejectInvite(channel: Channel): void {
+      this.$emit('invitation-rejected', channel);
     },
 
   },

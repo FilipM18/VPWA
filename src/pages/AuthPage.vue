@@ -35,7 +35,7 @@
         <!-- fixná min-height aby nič neskákalo -->
         <q-tab-panels
           v-model="tab"
-          style="min-height: 420px;" 
+          style="min-height: 420px;"
         >
           <!-- Prihlásenie -->
           <q-tab-panel name="login" class="q-pa-none">
@@ -167,6 +167,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { login, register as apiRegister } from '../api'
 
 export default defineComponent({
   name: 'AuthPage',
@@ -237,13 +238,47 @@ export default defineComponent({
     },
 
     handleLogin () {
-      console.log('login payload', this.loginForm)
-      this.$router.push('/chat').catch(() => {}) 
+      if (this.$q.loading && typeof this.$q.loading.show === 'function') {
+        this.$q.loading.show()
+      }
+      login(this.loginForm.email, this.loginForm.password)
+        .then((res) => {
+          const tokenValue = res.token?.value
+          // Save token
+          if (tokenValue) {
+            localStorage.setItem('auth_token', tokenValue)
+          }
+          this.$router.push('/chat').catch(() => {})
+        })
+        .catch((err) => {
+          console.error('Login error', err)
+          this.$q.notify({ type: 'negative', message: (err && err.message) || 'Prihlásenie zlyhalo' })
+        })
+        .finally(() => {
+          if (this.$q.loading && typeof this.$q.loading.hide === 'function') {
+            this.$q.loading.hide()
+          }
+        })
     },
 
     handleRegister () {
-      console.log('register payload', this.registerForm)
-      this.$router.push('/chat').catch(() => {})
+      if (this.$q.loading && typeof this.$q.loading.show === 'function') {
+        this.$q.loading.show()
+      }
+      apiRegister(this.registerForm)
+        .then(() => {
+          this.$q.notify({ type: 'positive', message: 'Registrácia prebehla, prihlás sa' })
+          this.tab = 'login'
+        })
+        .catch((err) => {
+          console.error('Register error', err)
+          this.$q.notify({ type: 'negative', message: (err && err.message) || 'Registrácia zlyhala' })
+        })
+        .finally(() => {
+          if (this.$q.loading && typeof this.$q.loading.hide === 'function') {
+            this.$q.loading.hide()
+          }
+        })
     }
   }
 })

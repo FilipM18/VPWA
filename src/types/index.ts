@@ -37,6 +37,7 @@ export interface ChannelMember {
   joinedAt: Date | string
   kickVotes?: number
   isBanned?: boolean
+  isAccepted?: boolean | null
 }
 
 // Message Types
@@ -123,7 +124,10 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   user: User
-  token: string
+  token: {
+    type: string
+    value: string
+  }
 }
 
 export interface NotificationPreferences {

@@ -79,6 +79,7 @@
         :channel-id="channelId"
         :members="members"
         @message-sent="handleMessageSent"
+        @command-executed="handleCommand"
       />
     </div>
   </q-page>
@@ -118,7 +119,7 @@ export default defineComponent({
       default: () => []
     }
   },
-  emits: ['message-sent'],
+  emits: ['message-sent', 'toggle-members-drawer'],
   data() {
     return {
       messages: [] as ChatMessage[],
@@ -238,6 +239,11 @@ export default defineComponent({
       void this.$nextTick(() => {
         this.scrollToBottom()
       })
+    },
+    handleCommand(payload: { command: string }): void {
+      if (payload.command === 'list') {
+        this.$emit('toggle-members-drawer')
+      }
     },
     formatDate(date: Date): string {
       const today = new Date()

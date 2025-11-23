@@ -143,7 +143,34 @@ export default defineComponent({
   },
   methods: {
     sendMessage(): void {
+      const trimmed = this.message.trim()
+      if (!trimmed) return
+
+      // Handle commands
+      if (trimmed.startsWith('/')) {
+        this.handleCommand(trimmed)
+        this.message = ''
+        return
+      }
+
+      // Regular message
+      this.$emit('message-sent', trimmed)
       this.message = ''
+    },
+    handleCommand(cmd: string): void {
+      const parts = cmd.split(/\s+/)
+      const command = parts[0]?.toLowerCase()
+
+      if (command === '/list') {
+        this.$emit('command-executed', { command: 'list' })
+        return
+      }
+
+      // Other commands will be implemented later
+      this.$q.notify({
+        type: 'info',
+        message: `Príkaz ${command} ešte nie je implementovaný`,
+      })
     },
     insertEmoji(emoji: string): void {
       this.message += emoji

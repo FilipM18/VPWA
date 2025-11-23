@@ -20,6 +20,7 @@
           />
           <span class="ellipsis" :class="$q.screen.lt.sm ? 'text-body2' : ''">
             {{ currentChannelName }}
+            <span v-if="currentUser" class="text-caption text-white text-opacity-70 q-ml-md">({{ currentUser.nickName }})</span>
           </span>
           <q-badge
             v-if="isCurrentChannelPrivate && $q.screen.gt.xs"
@@ -71,7 +72,10 @@
           <channel-list
             :channels="channels"
             :current-channel-id="currentChannelId"
+            :current-user-id="currentUser?.id ?? null"
             @channel-selected="selectChannel"
+            @invitation-accepted="handleAcceptInvitation"
+            @invitation-rejected="handleRejectInvitation"
             @close="$q.screen.lt.md && (leftDrawerOpen = false)"
           />
         </div>
@@ -111,6 +115,7 @@
         :current-user="currentUser"
         :members="members"
         @message-sent="handleMessageSent"
+        @toggle-members-drawer="toggleRightDrawer"
       />
 
       <!-- Empty state when no channel selected -->
@@ -136,7 +141,7 @@ import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingIndicator as TypingIndicatorType } from '../types';
-import { mockUsers, mockChannels } from '../utils/mockData';
+import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers } from '../api'
 
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
@@ -207,38 +212,58 @@ export default defineComponent({
   },
   created() {
     console.log('MainLayout created')
-    this.initializeApp();
+    void this.initializeApp()
   },
-  mounted() {
+  async mounted() {
     console.log('MainLayout mounted')
-    this.loadInitialData();
-
+    await this.loadInitialData()
   },
   methods: {
-    initializeApp(): void {
-      const user = mockUsers[0];
-      if (user) {
-        this.currentUser = {
-          ...user,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        } as User;
-        console.log('currentUser set to:', this.currentUser)
-      }
-    },
-    loadInitialData(): void {
-      // Load channels from mock data - dates are already Date objects
-      this.channels = mockChannels;
-      console.log('Channels loaded:', this.channels.length, this.channels)
-
-      if (this.channels.length > 0 && !this.currentChannelId) {
-        const firstChannel = this.channels[0];
-        console.log('Selecting first channel:', firstChannel)
-        if (firstChannel) {
-          this.selectChannel(firstChannel);
+    async initializeApp(): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      if (token) {
+        try {
+          const user = await getCurrentUser(token)
+          this.currentUser = { ...user, createdAt: new Date(), updatedAt: new Date() } as User
+          console.log('currentUser set from API:', this.currentUser)
+        } catch (err) {
+          console.warn('Failed to load current user:', err)
         }
       }
-      this.loadChannelMembers();
+    },
+
+    async loadInitialData(): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        // Načítaj kanály a pozvánky
+        const [channels, invitations] = await Promise.all([
+          getChannels(token),
+          getInvitations(token)
+        ])
+
+        // Označ pozvánky
+        const invitationsWithFlag = invitations.map(inv => ({
+          ...inv,
+          isNewInvite: true
+        }))
+
+        // Spoj kanály a pozvánky
+        this.channels = [...invitationsWithFlag, ...channels] as ChannelWithMeta[]
+        console.log('Channels loaded from API:', this.channels.length)
+
+        if (this.channels.length > 0 && !this.currentChannelId) {
+          const firstChannel = this.channels[0]
+          if (firstChannel) {
+            this.selectChannel(firstChannel)
+          }
+        }
+      } catch (err) {
+        console.error('Failed loading channels from API:', err)
+        // Leave channels empty — user can login to see channels
+        this.channels = []
+      }
+
+      this.loadChannelMembers()
     },
     loadChannelData(channelId: number): void {
       this.$emit('channel-changed', channelId);
@@ -250,8 +275,19 @@ export default defineComponent({
         return;
       }
 
-      // Load all users from mock data as members
-      this.members = mockUsers;
+      const token = localStorage.getItem('auth_token') || undefined
+      getChannelMembers(id, token)
+        .then((members: User[]) => {
+          this.members = members;
+        })
+        .catch((err: Error) => {
+          console.error('Failed to load members:', err);
+          this.$q.notify({
+            type: 'negative',
+            message: 'Nepodarilo sa načítať členov kanála',
+          });
+          this.members = [];
+        });
     },
 
     toggleLeftDrawer() {
@@ -279,6 +315,42 @@ export default defineComponent({
     },
     handleMessageSent(message: ChatMessage): void {
       console.log('Message sent:', message);
+    },
+    async handleAcceptInvitation(channel: Channel): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await acceptInvitation(channel.id, token)
+        this.$q.notify({
+          type: 'positive',
+          message: `Úspešne si sa pridal do kanála #${channel.name}`,
+        })
+        // Reload channels
+        await this.loadInitialData()
+      } catch (err) {
+        console.error('Failed to accept invitation:', err)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa akceptovať pozvánku',
+        })
+      }
+    },
+    async handleRejectInvitation(channel: Channel): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await rejectInvitation(channel.id, token)
+        this.$q.notify({
+          type: 'info',
+          message: `Odmietnutá pozvánka do kanála #${channel.name}`,
+        })
+        // Remove from channels list
+        this.channels = this.channels.filter(c => c.id !== channel.id)
+      } catch (err) {
+        console.error('Failed to reject invitation:', err)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa odmietnuť pozvánku',
+        })
+      }
     },
   },
 });
