@@ -182,6 +182,86 @@ export async function rejectInvitation(channelId: number, token?: string): Promi
   }
 }
 
+type ApiMessage = {
+  id: number
+  channel_id?: number
+  channelId?: number
+  user_id?: number
+  userId?: number
+  content: string
+  created_at?: string
+  createdAt?: string
+  updated_at?: string
+  updatedAt?: string
+  deleted_at?: string | null
+  deletedAt?: string | null
+  user?: {
+    id: number
+    first_name?: string
+    firstName?: string
+    last_name?: string
+    lastName?: string
+    nick_name?: string
+    nickName?: string
+    status?: string
+    avatar_url?: string
+    avatarUrl?: string
+  }
+}
+
+type MessagesResponse = {
+  data: ApiMessage[]
+  meta: {
+    hasMore: boolean
+    oldestMessageId: number | null
+    count: number
+  }
+}
+
+import type { ChatMessage } from '../types'
+
+function normalizeMessage(m: ApiMessage): ChatMessage {
+  return {
+    id: m.id,
+    channelId: m.channelId ?? m.channel_id ?? 0,
+    authorId: m.userId ?? m.user_id ?? 0,
+    author: m.user?.nickName ?? m.user?.nick_name ?? 'Unknown',
+    content: m.content,
+    timestamp: new Date(m.createdAt ?? m.created_at ?? Date.now()),
+  }
+}
+
+export async function getMessages(
+  channelId: number,
+  token?: string,
+  before?: number,
+  limit: number = 50
+): Promise<{ messages: ChatMessage[]; hasMore: boolean; oldestMessageId: number | null }> {
+  const params = new URLSearchParams()
+  params.append('limit', limit.toString())
+  if (before) {
+    params.append('before', before.toString())
+  }
+
+  const res = await fetch(`${API_BASE}/channels/${channelId}/messages?${params.toString()}`, {
+    headers: authHeaders(token)
+  })
+
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (res.status === 403) throw new Error('Forbidden: You must be a member of this channel')
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Failed to load messages: ${res.status} ${txt}`)
+  }
+
+  const response = (await res.json()) as MessagesResponse
+  return {
+    messages: response.data.map(normalizeMessage),
+    hasMore: response.meta.hasMore,
+    oldestMessageId: response.meta.oldestMessageId,
+  }
+}
+
 export default {
   getChannels,
   getChannelMembers,
@@ -191,4 +271,5 @@ export default {
   getCurrentUser,
   login,
   register,
+  getMessages,
 }

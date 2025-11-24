@@ -91,8 +91,8 @@ import type { QScrollArea } from 'quasar'
 import MessageInput from '../components/MessageInput.vue'
 import type { User, ChatMessage } from '../types'
 import MessageItem from '../components/MessageItem.vue'
-import { mockMessages } from '../utils/mockMessages'
 import TypingIndicator from '../components/TypingIndicator.vue'
+import { getMessages } from '../api'
 
 type MessageWithDate = { type: 'date'; label: string }
 type MessageEntry = { type: 'message'; data: ChatMessage }
@@ -123,11 +123,12 @@ export default defineComponent({
   data() {
     return {
       messages: [] as ChatMessage[],
-      allMessages: [] as ChatMessage[],
       scrollTarget: null as Element | null,
-      pageSize: 10,
-      nextIndex: 0,
       loadingOlder: false,
+      hasMore: true,
+      oldestMessageId: null as number | null,
+      pageSize: 30,
+      initialLoad: true,
       typingUsers: [
         { channelId: 1, userId: 5, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...', avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg' },
         { channelId: 1, userId: 1, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?', avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg' },
@@ -171,8 +172,8 @@ export default defineComponent({
   watch: {
     channelId: {
       immediate: true,
-      handler() {
-        this.initializeMessages()
+      async handler() {
+        await this.initializeMessages()
         void this.$nextTick(() => {
           this.scrollToBottom(false)
         })
@@ -180,25 +181,31 @@ export default defineComponent({
     }
   },
   methods: {
-    initializeMessages(): void {
-      const filtered = mockMessages.filter(message => message.channelId === this.channelId)
-      const sorted = [...filtered].sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime()
-        const timeB = new Date(b.timestamp).getTime()
-        return timeA - timeB
-      })
-      this.allMessages = sorted
-      const total = sorted.length
-      const startIndex = Math.max(0, total - this.pageSize)
-      this.nextIndex = startIndex
-      this.messages = sorted.slice(startIndex)
-    },
-    onLoad(_index: number, done: (stop?: boolean) => void): void {
-      if (this.loadingOlder) {
-        done()
-        return
+    async initializeMessages(): Promise<void> {
+      this.messages = []
+      this.hasMore = true
+      this.oldestMessageId = null
+      this.initialLoad = true
+
+      try {
+        const token = localStorage.getItem('auth_token') ?? undefined
+        const result = await getMessages(this.channelId, token, undefined, this.pageSize)
+        this.messages = result.messages
+        this.hasMore = result.hasMore
+        this.oldestMessageId = result.oldestMessageId
+        this.initialLoad = false
+      } catch (error) {
+        console.error('Failed to load messages:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa načítať správy',
+          position: 'top'
+        })
+        this.initialLoad = false
       }
-      if (this.nextIndex <= 0) {
+    },
+    async onLoad(_index: number, done: (stop?: boolean) => void): Promise<void> {
+      if (this.loadingOlder || !this.hasMore) {
         done(true)
         return
       }
@@ -208,32 +215,55 @@ export default defineComponent({
       const previousHeight = target?.scrollHeight ?? 0
 
       this.loadingOlder = true
-      const nextStart = Math.max(0, this.nextIndex - this.pageSize)
-      const older = this.allMessages.slice(nextStart, this.nextIndex)
-      this.messages = [...older, ...this.messages]
-      this.nextIndex = nextStart
 
-      void this.$nextTick(() => {
-        if (scrollArea && target) {
-          const newHeight = target.scrollHeight
-          const diff = newHeight - previousHeight
-          const currentPosition = target.scrollTop
-          scrollArea.setScrollPosition('vertical', currentPosition + diff, 0)
+      try {
+        const token = localStorage.getItem('auth_token') ?? undefined
+        const result = await getMessages(
+          this.channelId,
+          token,
+          this.oldestMessageId ?? undefined,
+          this.pageSize
+        )
+
+        if (result.messages.length > 0) {
+          this.messages = [...result.messages, ...this.messages]
+          this.hasMore = result.hasMore
+          this.oldestMessageId = result.oldestMessageId
+
+          void this.$nextTick(() => {
+            if (scrollArea && target) {
+              const newHeight = target.scrollHeight
+              const diff = newHeight - previousHeight
+              const currentPosition = target.scrollTop
+              scrollArea.setScrollPosition('vertical', currentPosition + diff, 0)
+            }
+            this.loadingOlder = false
+            done(!this.hasMore)
+          })
+        } else {
+          this.loadingOlder = false
+          done(true)
         }
+      } catch (error) {
+        console.error('Failed to load older messages:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa načítať staršie správy',
+          position: 'top'
+        })
         this.loadingOlder = false
-        done(this.nextIndex === 0)
-      })
+        done(true)
+      }
     },
     handleMessageSent(message: ChatMessage): void {
       const newMessage: ChatMessage = {
         ...message,
-        id: this.messages.length + 1,
+        id: Date.now(), // Temporary ID until we get the real one from backend
         channelId: this.channelId,
         authorId: this.currentUserId,
         author: this.currentUser.nickName,
         timestamp: new Date()
       }
-      this.allMessages = [...this.allMessages, newMessage]
       this.messages = [...this.messages, newMessage]
       this.$emit('message-sent', newMessage)
       void this.$nextTick(() => {
