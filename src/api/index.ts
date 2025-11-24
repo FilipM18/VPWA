@@ -188,6 +188,8 @@ type ApiMessage = {
   channelId?: number
   user_id?: number
   userId?: number
+  author_id?: number
+  authorId?: number
   content: string
   created_at?: string
   createdAt?: string
@@ -196,6 +198,18 @@ type ApiMessage = {
   deleted_at?: string | null
   deletedAt?: string | null
   user?: {
+    id: number
+    first_name?: string
+    firstName?: string
+    last_name?: string
+    lastName?: string
+    nick_name?: string
+    nickName?: string
+    status?: string
+    avatar_url?: string
+    avatarUrl?: string
+  }
+  author?: {
     id: number
     first_name?: string
     firstName?: string
@@ -221,11 +235,12 @@ type MessagesResponse = {
 import type { ChatMessage } from '../types'
 
 function normalizeMessage(m: ApiMessage): ChatMessage {
+  const userOrAuthor = m.author ?? m.user
   return {
     id: m.id,
     channelId: m.channelId ?? m.channel_id ?? 0,
-    authorId: m.userId ?? m.user_id ?? 0,
-    author: m.user?.nickName ?? m.user?.nick_name ?? 'Unknown',
+    authorId: m.authorId ?? m.author_id ?? m.userId ?? m.user_id ?? 0,
+    author: userOrAuthor?.nickName ?? userOrAuthor?.nick_name ?? 'Unknown',
     content: m.content,
     timestamp: new Date(m.createdAt ?? m.created_at ?? Date.now()),
   }

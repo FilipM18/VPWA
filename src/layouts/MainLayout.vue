@@ -142,6 +142,7 @@ import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingIndicator as TypingIndicatorType } from '../types';
 import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers } from '../api'
+import websocketService from '../services/websocket'
 
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
@@ -216,7 +217,32 @@ export default defineComponent({
   },
   async mounted() {
     console.log('MainLayout mounted')
+
+    // Connect WebSocket FIRST before loading data
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      try {
+        console.log('Connecting WebSocket with token...')
+        await websocketService.connect(token)
+        console.log('WebSocket connected successfully')
+      } catch (error) {
+        console.error('Failed to connect WebSocket:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa pripojiť WebSocket',
+          position: 'top'
+        })
+      }
+    } else {
+      console.log('No auth token found, skipping WebSocket connection')
+    }
+
+    // Now load data after WebSocket is ready
     await this.loadInitialData()
+  },
+  beforeUnmount() {
+    // Disconnect WebSocket when layout unmounts
+    websocketService.disconnect()
   },
   methods: {
     async initializeApp(): Promise<void> {

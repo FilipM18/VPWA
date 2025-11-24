@@ -47,17 +47,12 @@
                   />
                 </template>
 
-                <!-- Typing Indicator as a message -->
-                <div v-if="typingUsers.length > 0" class="q-mb-md">
-                  <TypingIndicator :users="typingUsers" />
+                <!-- Empty state for no messages -->
+                <div v-if="messages.length === 0" class="text-center q-pa-xl">
+                  <q-icon name="forum" size="80px" color="grey-5" />
+                  <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
+                  <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
                 </div>
-              </div>
-
-              <!-- Empty State -->
-              <div v-else class="text-center q-pa-xl">
-                <q-icon name="forum" size="80px" color="grey-5" />
-                <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
-                <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
               </div>
             </div>
           </div>
@@ -74,11 +69,11 @@
     <!-- Message Input at Bottom (Fixed) -->
     <div class="bottom-section">
       <q-separator />
+      <typing-indicator :typing-users="typingUsers" />
       <message-input
-        :current-user="currentUser"
         :channel-id="channelId"
         :members="members"
-        @message-sent="handleMessageSent"
+        @message-sent="(content) => handleMessageSent(content)"
         @command-executed="handleCommand"
       />
     </div>
@@ -93,6 +88,7 @@ import type { User, ChatMessage } from '../types'
 import MessageItem from '../components/MessageItem.vue'
 import TypingIndicator from '../components/TypingIndicator.vue'
 import { getMessages } from '../api'
+import websocketService from '../services/websocket'
 
 type MessageWithDate = { type: 'date'; label: string }
 type MessageEntry = { type: 'message'; data: ChatMessage }
@@ -129,11 +125,8 @@ export default defineComponent({
       oldestMessageId: null as number | null,
       pageSize: 30,
       initialLoad: true,
-      typingUsers: [
-        { channelId: 1, userId: 5, nickName: 'Eva', isTyping: true, messagePreview: 'Ahoj, poďme...', avatarUrl: 'https://cdn.quasar.dev/img/avatar5.jpg' },
-        { channelId: 1, userId: 1, nickName: 'Ján', isTyping: true, messagePreview: 'Čo robíš dnes?', avatarUrl: 'https://cdn.quasar.dev/img/avatar1.jpg' },
-        { channelId: 1, userId: 3, nickName: 'Peter', isTyping: true, messagePreview: 'Pridám sa k vám...', avatarUrl: 'https://cdn.quasar.dev/img/avatar3.jpg' }
-      ]
+      unsubscribers: [] as Array<() => void>,
+      typingUsers: [] as Array<{ userId: number; nickName: string }>
     }
   },
   mounted() {
@@ -145,6 +138,32 @@ export default defineComponent({
         scrollArea.setScrollPosition('vertical', target.scrollHeight, 0)
       }
     })
+
+    // Join the channel room
+    websocketService.joinChannel(this.channelId)
+
+    // Listen for incoming messages - use arrow function to capture current channelId
+    const unsubscribe = websocketService.onMessage((message) => {
+      console.log('ChatPage received message:', message, 'current channelId:', this.channelId)
+      // Only add if it's for this channel and not already in the list
+      if (message.channelId === this.channelId && !this.messages.find(m => m.id === message.id)) {
+        console.log('Adding message to list')
+        this.messages = [...this.messages, message]
+        void this.$nextTick(() => {
+          this.scrollToBottom()
+        })
+      } else {
+        console.log('Message ignored - wrong channel or duplicate')
+      }
+    })
+    this.unsubscribers.push(unsubscribe)
+  },
+  beforeUnmount() {
+    // Cleanup message listeners
+    this.unsubscribers.forEach(unsub => unsub())
+
+    // Leave the channel room when component unmounts
+    websocketService.leaveChannel(this.channelId)
   },
   computed: {
     currentUserId(): number {
@@ -172,7 +191,16 @@ export default defineComponent({
   watch: {
     channelId: {
       immediate: true,
-      async handler() {
+      async handler(newChannelId, oldChannelId) {
+        // Leave old channel if switching channels
+        if (oldChannelId !== undefined && oldChannelId !== newChannelId) {
+          websocketService.leaveChannel(oldChannelId)
+        }
+
+        // Join new channel
+        websocketService.joinChannel(newChannelId)
+
+        // Load messages
         await this.initializeMessages()
         void this.$nextTick(() => {
           this.scrollToBottom(false)
@@ -255,20 +283,10 @@ export default defineComponent({
         done(true)
       }
     },
-    handleMessageSent(message: ChatMessage): void {
-      const newMessage: ChatMessage = {
-        ...message,
-        id: Date.now(), // Temporary ID until we get the real one from backend
-        channelId: this.channelId,
-        authorId: this.currentUserId,
-        author: this.currentUser.nickName,
-        timestamp: new Date()
-      }
-      this.messages = [...this.messages, newMessage]
-      this.$emit('message-sent', newMessage)
-      void this.$nextTick(() => {
-        this.scrollToBottom()
-      })
+    handleMessageSent(content: string): void {
+      // Send message via WebSocket
+      websocketService.sendMessage(this.channelId, content)
+      // Message will be received back via the onMessage listener after server processes it
     },
     handleCommand(payload: { command: string }): void {
       if (payload.command === 'list') {
