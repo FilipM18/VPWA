@@ -8,6 +8,18 @@ export interface UserJoinedEvent {
   nickName: string
 }
 
+export interface TypingEvent {
+  userId: number
+  nickName: string
+  channelId: number
+  messagePreview?: string
+}
+
+export interface StoppedTypingEvent {
+  userId: number
+  channelId: number
+}
+
 class WebSocketService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private socket: any = null
@@ -18,6 +30,8 @@ class WebSocketService {
   private messageListeners: Set<(message: Message) => void> = new Set()
   private userJoinedListeners: Set<(event: UserJoinedEvent) => void> = new Set()
   private userLeftListeners: Set<(event: UserJoinedEvent) => void> = new Set()
+  private typingListeners: Set<(event: TypingEvent) => void> = new Set()
+  private stoppedTypingListeners: Set<(event: StoppedTypingEvent) => void> = new Set()
 
   connect(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -72,6 +86,17 @@ class WebSocketService {
 
       this.socket.on('user_left', (event: UserJoinedEvent) => {
         this.userLeftListeners.forEach((listener) => listener(event))
+      })
+
+      // Typing events
+      this.socket.on('user_typing', (event: TypingEvent) => {
+        console.log('Received user_typing event:', event)
+        this.typingListeners.forEach((listener) => listener(event))
+      })
+
+      this.socket.on('user_stopped_typing', (event: StoppedTypingEvent) => {
+        console.log('Received user_stopped_typing event:', event)
+        this.stoppedTypingListeners.forEach((listener) => listener(event))
       })
 
       // Connection timeout
@@ -134,6 +159,30 @@ class WebSocketService {
     })
   }
 
+  sendTyping(channelId: number, messagePreview?: string): void {
+    if (!this.socket || !this.isConnected) {
+      console.log('Cannot send typing: not connected')
+      return
+    }
+
+    console.log('Sending typing event:', { channelId, messagePreview })
+    this.socket.emit('user_typing', {
+      channelId,
+      messagePreview,
+    })
+  }
+
+  stopTyping(channelId: number): void {
+    if (!this.socket || !this.isConnected) {
+      return
+    }
+
+    console.log('Sending stopped typing event:', { channelId })
+    this.socket.emit('user_stopped_typing', {
+      channelId,
+    })
+  }
+
   // Event listener registration
   onMessage(callback: (message: Message) => void): () => void {
     this.messageListeners.add(callback)
@@ -148,6 +197,16 @@ class WebSocketService {
   onUserLeft(callback: (event: UserJoinedEvent) => void): () => void {
     this.userLeftListeners.add(callback)
     return () => this.userLeftListeners.delete(callback)
+  }
+
+  onTyping(callback: (event: TypingEvent) => void): () => void {
+    this.typingListeners.add(callback)
+    return () => this.typingListeners.delete(callback)
+  }
+
+  onStoppedTyping(callback: (event: StoppedTypingEvent) => void): () => void {
+    this.stoppedTypingListeners.add(callback)
+    return () => this.stoppedTypingListeners.delete(callback)
   }
 
   isSocketConnected(): boolean {

@@ -87,7 +87,7 @@ export interface CommandResult {
   data?: unknown
 }
 
-export interface TypingIndicator {
+export interface TypingUser {
   channelId: number
   userId: number
   nickName: string

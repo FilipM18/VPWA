@@ -54,6 +54,7 @@
                   <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
                 </div>
               </div>
+              <TypingIndicator :users="typingUsers" />
             </div>
           </div>
 
@@ -69,11 +70,10 @@
     <!-- Message Input at Bottom (Fixed) -->
     <div class="bottom-section">
       <q-separator />
-      <typing-indicator :typing-users="typingUsers" />
       <message-input
         :channel-id="channelId"
         :members="members"
-        @message-sent="(content) => handleMessageSent(content)"
+        @message-sent="(content: string) => handleMessageSent(content)"
         @command-executed="handleCommand"
       />
     </div>
@@ -84,11 +84,11 @@
 import { defineComponent, type PropType } from 'vue'
 import type { QScrollArea } from 'quasar'
 import MessageInput from '../components/MessageInput.vue'
-import type { User, ChatMessage } from '../types'
+import type { User, ChatMessage, TypingUser } from '../types'
 import MessageItem from '../components/MessageItem.vue'
 import TypingIndicator from '../components/TypingIndicator.vue'
 import { getMessages } from '../api'
-import websocketService from '../services/websocket'
+import websocketService, { type TypingEvent, type StoppedTypingEvent } from '../services/websocket'
 
 type MessageWithDate = { type: 'date'; label: string }
 type MessageEntry = { type: 'message'; data: ChatMessage }
@@ -126,7 +126,8 @@ export default defineComponent({
       pageSize: 30,
       initialLoad: true,
       unsubscribers: [] as Array<() => void>,
-      typingUsers: [] as Array<{ userId: number; nickName: string }>
+      typingUsers: [] as TypingUser[],
+      typingTimeouts: new Map<number, NodeJS.Timeout>(),
     }
   },
   mounted() {
@@ -157,10 +158,71 @@ export default defineComponent({
       }
     })
     this.unsubscribers.push(unsubscribe)
+
+    // Listen for typing events
+    const unsubTyping = websocketService.onTyping((event: TypingEvent) => {
+      console.log('ChatPage: typing event received', event, 'currentChannelId:', this.channelId, 'currentUserId:', this.currentUserId)
+      
+      if (event.channelId !== this.channelId) {
+        console.log('ChatPage: ignoring typing - different channel')
+        return
+      }
+      if (event.userId === this.currentUserId) {
+        console.log('ChatPage: ignoring own typing')
+        return
+      }
+
+      // Find or add user
+      const existingIndex = this.typingUsers.findIndex(u => u.userId === event.userId)
+      
+      // Make sure messagePreview is properly set
+      const preview = event.messagePreview?.trim() || 'typing...'
+      console.log('ChatPage: messagePreview from event:', event.messagePreview, 'using:', preview)
+      
+      const typingUser: TypingUser = {
+        channelId: event.channelId,
+        userId: event.userId,
+        nickName: event.nickName,
+        isTyping: true,
+        messagePreview: preview,
+      }
+
+      if (existingIndex >= 0) {
+        console.log('ChatPage: updating existing typing user')
+        // Use splice for reactive update
+        this.typingUsers.splice(existingIndex, 1, typingUser)
+      } else {
+        console.log('ChatPage: adding new typing user')
+        this.typingUsers.push(typingUser)
+      }
+      console.log('ChatPage: typingUsers now:', this.typingUsers)
+
+      // Auto-remove after 7 seconds as fallback
+      const existing = this.typingTimeouts.get(event.userId)
+      if (existing) clearTimeout(existing)
+      
+      const timeout = setTimeout(() => {
+        this.removeTypingUser(event.userId)
+      }, 7000)
+      this.typingTimeouts.set(event.userId, timeout)
+    })
+    this.unsubscribers.push(unsubTyping)
+
+    // Listen for stopped typing events
+    const unsubStoppedTyping = websocketService.onStoppedTyping((event: StoppedTypingEvent) => {
+      console.log('ChatPage: stopped typing event', event)
+      if (event.channelId !== this.channelId) return
+      this.removeTypingUser(event.userId)
+    })
+    this.unsubscribers.push(unsubStoppedTyping)
   },
   beforeUnmount() {
     // Cleanup message listeners
     this.unsubscribers.forEach(unsub => unsub())
+
+    // Clear all typing timeouts
+    this.typingTimeouts.forEach(timeout => clearTimeout(timeout))
+    this.typingTimeouts.clear()
 
     // Leave the channel room when component unmounts
     websocketService.leaveChannel(this.channelId)
@@ -326,6 +388,19 @@ export default defineComponent({
       }
       const target = scrollArea.getScrollTarget()
       scrollArea.setScrollPosition('vertical', target.scrollHeight, animated ? 300 : 0)
+    },
+    removeTypingUser(userId: number): void {
+      const index = this.typingUsers.findIndex(u => u.userId === userId)
+      if (index >= 0) {
+        this.typingUsers.splice(index, 1)
+      }
+      
+      // Clear timeout
+      const timeout = this.typingTimeouts.get(userId)
+      if (timeout) {
+        clearTimeout(timeout)
+        this.typingTimeouts.delete(userId)
+      }
     }
   }
 })

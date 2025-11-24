@@ -140,7 +140,7 @@ import ChannelList from '../components/ChannelList.vue';
 import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
-import type { Channel, User, UserStatus, ChatMessage, TypingIndicator as TypingIndicatorType } from '../types';
+import type { Channel, User, UserStatus, ChatMessage, TypingUser } from '../types';
 import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers } from '../api'
 import websocketService from '../services/websocket'
 
@@ -164,7 +164,7 @@ export default defineComponent({
       channels: [] as ChannelWithMeta[],
       currentChannelId: null as number | null,
       members: [] as User[],
-      typingUsers: [] as TypingIndicatorType[],
+      typingUsers: [] as TypingUser[],
     };
   },
   computed: {

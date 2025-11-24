@@ -35,6 +35,7 @@
           :maxlength="2000"
           @keydown.enter.exact.prevent="sendMessage"
           @keydown.tab.prevent="handleTabComplete"
+          @update:model-value="handleInput"
         >
           <template #prepend>
             <q-btn flat dense round icon="attachment" :size="uiSize" :icon-size="iconPx">
@@ -84,11 +85,10 @@
   </div>
 </template>
 
-
-
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import type { User } from '../types'
+import websocketService from '../services/websocket'
 
 interface CommandHint { command: string; usage: string; description: string }
 
@@ -98,11 +98,11 @@ export default defineComponent({
     channelId: { type: Number, required: true },
     members: { type: Array as PropType<User[]>, default: () => [] }
   },
-  emits: ['message-sent', 'command-executed', 'typing'],
+  emits: ['message-sent', 'command-executed'],
   data() {
     return {
       message: '',
-      typingTimer: null as number | null,
+      typingTimer: null as NodeJS.Timeout | null,
       isTyping: false,
       commands: [
         { command: '/join', usage: 'channelName [private]', description: 'Vytvor alebo sa pripoj do kanála' },
@@ -156,6 +156,55 @@ export default defineComponent({
       // Regular message
       this.$emit('message-sent', trimmed)
       this.message = ''
+      
+      // Stop typing indicator
+      this.stopTypingIndicator()
+    },
+    handleInput(): void {
+      console.log('handleInput called, message:', this.message)
+      
+      // Don't send typing for commands
+      if (this.message.startsWith('/')) {
+        this.stopTypingIndicator()
+        return
+      }
+
+      // Stop typing if message is empty
+      if (!this.message.trim()) {
+        this.stopTypingIndicator()
+        return
+      }
+
+      // Send typing indicator
+      if (!this.isTyping) {
+        this.isTyping = true
+        console.log('Starting typing indicator')
+        websocketService.sendTyping(this.channelId, this.message.substring(0, 50))
+      } else {
+        // Update preview
+        console.log('Updating typing preview')
+        websocketService.sendTyping(this.channelId, this.message.substring(0, 50))
+      }
+
+      // Reset timer - stop typing after 3s of inactivity
+      if (this.typingTimer) {
+        clearTimeout(this.typingTimer)
+      }
+
+      this.typingTimer = setTimeout(() => {
+        console.log('Typing timer expired, stopping')
+        this.stopTypingIndicator()
+      }, 6000)
+    },
+    stopTypingIndicator(): void {
+      if (this.isTyping) {
+        this.isTyping = false
+        websocketService.stopTyping(this.channelId)
+      }
+      if (this.typingTimer) {
+        clearTimeout(this.typingTimer)
+        this.typingTimer = null
+      }
     },
     handleCommand(cmd: string): void {
       const parts = cmd.split(/\s+/)
@@ -188,6 +237,19 @@ export default defineComponent({
         if (first) this.selectCommand(first)
       }
     }
+  },
+  watch: {
+    channelId(newChannelId, oldChannelId) {
+      if (newChannelId !== oldChannelId) {
+        console.log('Channel changed, clearing message')
+        this.message = ''
+        this.stopTypingIndicator()
+      }
+    }
+  },
+  beforeUnmount() {
+    // Cleanup timer
+    this.stopTypingIndicator()
   }
 })
 </script>

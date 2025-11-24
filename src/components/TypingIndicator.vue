@@ -27,7 +27,7 @@
           <template v-for="(user, index) in displayedUsers" :key="user.userId">
             <img
               v-if="user.avatarUrl"
-              class="q-message-avatar q-message-avatar--received stacked-avatar"
+              class="q-message-avatar q-message-avatar--received stacked-avatar clickable-avatar"
               :src="user.avatarUrl"
               :alt="user.nickName"
               :style="{ 
@@ -35,6 +35,7 @@
                 marginLeft: index > 0 ? '-12px' : '0',
                 border: '2px solid white'
               }"
+              @click.stop="selectUser(user.userId)"
             >
             <q-avatar
               v-else
@@ -43,10 +44,11 @@
                 marginLeft: index > 0 ? '-12px' : '0',
                 border: '2px solid white'
               }"
-              class="stacked-avatar"
+              class="stacked-avatar clickable-avatar"
               color="grey"
               text-color="white"
               size="40px"
+              @click.stop="selectUser(user.userId)"
             >
               {{ user.nickName.charAt(0).toUpperCase() }}
             </q-avatar>
@@ -75,17 +77,38 @@
 
     <!-- Expandable Preview Panel -->
     <q-slide-transition>
-      <div v-show="isExpanded" class="q-mt-sm q-ml-xl animated-slide-in" style="margin-left: 52px">
-        <q-card flat bordered class="rounded-borders shadow-1 bg-white">
-          <q-card-section class="q-pa-md bg-grey-1">
-            <div class="text-subtitle2 text-grey-8 row items-center">
-              <q-icon name="edit" size="18px" class="q-mr-xs" />
-              Message previews
+      <div v-show="isExpanded" class="animated-slide-in">
+        <!-- Show single user detail -->
+        <div v-if="selectedUser" class="q-ml-xs">
+          <q-chat-message
+            :name="selectedUser.nickName"
+            bg-color="grey-3"
+            text-color="grey-8"
+            @click="selectedUserId = null"
+            class="cursor-pointer"
+          >
+            <template v-slot:avatar>
+              <q-avatar size="40px">
+                <img
+                  v-if="selectedUser.avatarUrl"
+                  :src="selectedUser.avatarUrl"
+                  :alt="selectedUser.nickName"
+                >
+                <template v-else>
+                  {{ selectedUser.nickName.charAt(0).toUpperCase() }}
+                </template>
+              </q-avatar>
+            </template>
+            
+            <div class="row items-center">
+              <span>{{ selectedUser.messagePreview || 'typing...' }}</span>
+              <q-spinner-dots size="1.5rem" color="grey-7" class="q-ml-xs" />
             </div>
-          </q-card-section>
-          
-          <q-separator />
-          
+          </q-chat-message>
+        </div>
+        
+        <!-- List all users -->
+        <q-card v-else flat bordered class="rounded-borders shadow-1 bg-white" style="margin-left: 52px">
           <q-card-section class="q-pa-none">
             <q-scroll-area 
               :style="users.length > 4 ? 'height: 200px' : 'height: auto; max-height: 200px'"
@@ -94,7 +117,9 @@
                 <q-item 
                   v-for="user in users" 
                   :key="user.userId"
+                  clickable
                   class="q-pa-md transition-all hover-bg-grey-2"
+                  @click="selectUser(user.userId)"
                 >
                   <q-item-section avatar>
                     <q-avatar size="36px">
@@ -120,7 +145,7 @@
                   </q-item-section>
                   
                   <q-item-section side>
-                    <q-spinner-dots size="24px" color="primary" />
+                    <q-icon name="chevron_right" size="20px" color="grey-5" />
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -134,13 +159,13 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import type { TypingIndicator } from '../types'
+import type { TypingUser } from '../types'
 
 export default defineComponent({
   name: 'TypingIndicator',
   props: {
     users: {
-      type: Array as PropType<TypingIndicator[]>,
+      type: Array as PropType<TypingUser[]>,
       default: () => []
     },
     maxPreview: {
@@ -150,12 +175,17 @@ export default defineComponent({
   },
   data() {
     return {
-      isExpanded: false
+      isExpanded: false,
+      selectedUserId: null as number | null
     }
   },
   computed: {
-    displayedUsers(): TypingIndicator[] {
+    displayedUsers(): TypingUser[] {
       return this.users.slice(0, this.maxPreview)
+    },
+    selectedUser(): TypingUser | null {
+      if (!this.selectedUserId) return null
+      return this.users.find(u => u.userId === this.selectedUserId) || null
     },
     typingMessage(): string {
       const count = this.users.length
@@ -182,6 +212,13 @@ export default defineComponent({
   methods: {
     toggleExpanded() {
       this.isExpanded = !this.isExpanded
+      if (!this.isExpanded) {
+        this.selectedUserId = null
+      }
+    },
+    selectUser(userId: number) {
+      this.selectedUserId = userId
+      this.isExpanded = true
     }
   }
 })
@@ -194,6 +231,15 @@ export default defineComponent({
 
 .stacked-avatar {
   transition: transform 0.2s;
+}
+
+.clickable-avatar {
+  cursor: pointer;
+}
+
+.clickable-avatar:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
 }
 
 .stacked-avatar:hover {
