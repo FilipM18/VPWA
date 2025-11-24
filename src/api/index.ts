@@ -246,6 +246,78 @@ function normalizeMessage(m: ApiMessage): ChatMessage {
   }
 }
 
+export async function logout(token?: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+  if (!res.ok && res.status !== 401) {
+    throw new Error('Logout failed')
+  }
+}
+
+export async function joinChannel(
+  channelName: string,
+  isPrivate: boolean,
+  token?: string
+): Promise<{ channel: Channel }> {
+  const res = await fetch(`${API_BASE}/channels/join`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ channelName, isPrivate }),
+  })
+
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.message || 'Failed to join channel')
+  }
+
+  const data = await res.json()
+  return { channel: normalizeChannel(data.channel) }
+}
+
+export async function inviteToChannel(
+  channelId: number,
+  userId: number,
+  token?: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/channels/${channelId}/invite`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ userId }),
+  })
+
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.message || 'Failed to invite user')
+  }
+}
+
+export async function leaveChannel(
+  channelId: number,
+  userId?: number,
+  deleteChannel?: boolean,
+  token?: string
+): Promise<void> {
+  const body: { userId?: number; deleteChannel?: boolean } = {}
+  if (userId !== undefined) body.userId = userId
+  if (deleteChannel !== undefined) body.deleteChannel = deleteChannel
+
+  const res = await fetch(`${API_BASE}/channels/${channelId}/leave`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+    ...(Object.keys(body).length > 0 && { body: JSON.stringify(body) }),
+  })
+
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.message || 'Failed to leave channel')
+  }
+}
+
 export async function getMessages(
   channelId: number,
   token?: string,
@@ -286,5 +358,9 @@ export default {
   getCurrentUser,
   login,
   register,
+  logout,
   getMessages,
+  joinChannel,
+  inviteToChannel,
+  leaveChannel,
 }

@@ -74,6 +74,9 @@
             :current-channel-id="currentChannelId"
             :current-user-id="currentUser?.id ?? null"
             @channel-selected="selectChannel"
+            @channel-created="handleCreateChannel"
+            @channel-left="handleLeaveChannel"
+            @channel-deleted="handleDeleteChannel"
             @invitation-accepted="handleAcceptInvitation"
             @invitation-rejected="handleRejectInvitation"
             @close="$q.screen.lt.md && (leftDrawerOpen = false)"
@@ -116,6 +119,7 @@
         :members="members"
         @message-sent="handleMessageSent"
         @toggle-members-drawer="toggleRightDrawer"
+        @channels-changed="handleChannelsChanged"
       />
 
       <!-- Empty state when no channel selected -->
@@ -141,7 +145,7 @@ import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingUser } from '../types';
-import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers } from '../api'
+import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel } from '../api'
 import websocketService from '../services/websocket'
 
 type ChannelWithMeta = Channel & {
@@ -331,8 +335,23 @@ export default defineComponent({
       }
       localStorage.setItem('currentChannelId', String(channel.id));
     },
-    handleLogout(): void {
-      //this.$router.push('/auth')
+    async handleLogout(): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await logout(token)
+      } catch (err) {
+        console.error('Logout API error (continuing anyway):', err)
+      }
+
+      // Disconnect WebSocket
+      websocketService.disconnect()
+
+      // Clear local storage
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('currentChannelId')
+
+      // Redirect to auth page
+      void this.$router.push('/auth')
     },
     handleStatusChange(newStatus: UserStatus): void {
       if (this.currentUser) {
@@ -341,6 +360,18 @@ export default defineComponent({
     },
     handleMessageSent(message: ChatMessage): void {
       console.log('Message sent:', message);
+    },
+    async handleChannelsChanged(): Promise<void> {
+      // Clear current channel and reload (same as leave/delete handlers)
+      this.currentChannelId = null
+      this.members = []
+      await this.loadInitialData()
+
+      // Select first available channel
+      const firstChannel = this.channels[0]
+      if (firstChannel) {
+        this.selectChannel(firstChannel)
+      }
     },
     async handleAcceptInvitation(channel: Channel): Promise<void> {
       const token = localStorage.getItem('auth_token') || undefined
@@ -375,6 +406,83 @@ export default defineComponent({
         this.$q.notify({
           type: 'negative',
           message: 'Nepodarilo sa odmietnuť pozvánku',
+        })
+      }
+    },
+    async handleCreateChannel(data: { name: string; isPrivate: boolean }): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await joinChannel(data.name, data.isPrivate, token)
+        this.$q.notify({
+          type: 'positive',
+          message: `Kanál #${data.name} bol vytvorený`,
+        })
+        // Reload channels
+        await this.loadInitialData()
+        // Find and select the newly created channel
+        const newChannel = this.channels.find(c => c.name === data.name)
+        if (newChannel) {
+          this.selectChannel(newChannel)
+        }
+      } catch (err) {
+        console.error('Failed to create channel:', err)
+        this.$q.notify({
+          type: 'negative',
+          message: err instanceof Error ? err.message : 'Nepodarilo sa vytvoriť kanál',
+        })
+      }
+    },
+    async handleLeaveChannel(channel: Channel): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await leaveChannel(channel.id, undefined, false, token)
+        this.$q.notify({
+          type: 'positive',
+          message: `Opustil si kanál #${channel.name}`,
+        })
+
+        // Clear current channel and reload
+        this.currentChannelId = null
+        this.members = []
+        await this.loadInitialData()
+
+        // Select first available channel
+        const firstChannel = this.channels[0]
+        if (firstChannel) {
+          this.selectChannel(firstChannel)
+        }
+      } catch (err) {
+        console.error('Failed to leave channel:', err)
+        this.$q.notify({
+          type: 'negative',
+          message: err instanceof Error ? err.message : 'Nepodarilo sa opustiť kanál',
+        })
+      }
+    },
+    async handleDeleteChannel(channel: Channel): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        await leaveChannel(channel.id, undefined, true, token)
+        this.$q.notify({
+          type: 'positive',
+          message: `Kanál #${channel.name} bol zmazaný`,
+        })
+
+        // Clear current channel and reload
+        this.currentChannelId = null
+        this.members = []
+        await this.loadInitialData()
+
+        // Select first available channel
+        const firstChannel = this.channels[0]
+        if (firstChannel) {
+          this.selectChannel(firstChannel)
+        }
+      } catch (err) {
+        console.error('Failed to delete channel:', err)
+        this.$q.notify({
+          type: 'negative',
+          message: err instanceof Error ? err.message : 'Nepodarilo sa zmazať kanál',
         })
       }
     },

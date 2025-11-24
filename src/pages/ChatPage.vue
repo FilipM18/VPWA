@@ -72,6 +72,7 @@
       <q-separator />
       <message-input
         :channel-id="channelId"
+        :current-user-id="currentUser.id"
         :members="members"
         @message-sent="(content: string) => handleMessageSent(content)"
         @command-executed="handleCommand"
@@ -115,7 +116,7 @@ export default defineComponent({
       default: () => []
     }
   },
-  emits: ['message-sent', 'toggle-members-drawer'],
+  emits: ['message-sent', 'toggle-members-drawer', 'channels-changed'],
   data() {
     return {
       messages: [] as ChatMessage[],
@@ -143,6 +144,13 @@ export default defineComponent({
     // Join the channel room
     websocketService.joinChannel(this.channelId)
 
+    // Load initial messages
+    void this.initializeMessages().then(() => {
+      void this.$nextTick(() => {
+        this.scrollToBottom(false)
+      })
+    })
+
     // Listen for incoming messages - use arrow function to capture current channelId
     const unsubscribe = websocketService.onMessage((message) => {
       console.log('ChatPage received message:', message, 'current channelId:', this.channelId)
@@ -162,7 +170,7 @@ export default defineComponent({
     // Listen for typing events
     const unsubTyping = websocketService.onTyping((event: TypingEvent) => {
       console.log('ChatPage: typing event received', event, 'currentChannelId:', this.channelId, 'currentUserId:', this.currentUserId)
-      
+
       if (event.channelId !== this.channelId) {
         console.log('ChatPage: ignoring typing - different channel')
         return
@@ -174,11 +182,11 @@ export default defineComponent({
 
       // Find or add user
       const existingIndex = this.typingUsers.findIndex(u => u.userId === event.userId)
-      
+
       // Make sure messagePreview is properly set
       const preview = event.messagePreview?.trim() || 'typing...'
       console.log('ChatPage: messagePreview from event:', event.messagePreview, 'using:', preview)
-      
+
       const typingUser: TypingUser = {
         channelId: event.channelId,
         userId: event.userId,
@@ -200,7 +208,7 @@ export default defineComponent({
       // Auto-remove after 7 seconds as fallback
       const existing = this.typingTimeouts.get(event.userId)
       if (existing) clearTimeout(existing)
-      
+
       const timeout = setTimeout(() => {
         this.removeTypingUser(event.userId)
       }, 7000)
@@ -251,22 +259,21 @@ export default defineComponent({
     }
   },
   watch: {
-    channelId: {
-      immediate: true,
-      async handler(newChannelId, oldChannelId) {
-        // Leave old channel if switching channels
-        if (oldChannelId !== undefined && oldChannelId !== newChannelId) {
-          websocketService.leaveChannel(oldChannelId)
-        }
+    channelId(newId, oldId) {
+      if (oldId !== undefined && newId !== oldId) {
+        console.log('ChatPage: channelId changed from', oldId, 'to', newId)
+        console.log('ChatPage: Clearing messages, current count:', this.messages.length)
+        this.messages = []
+        this.hasMore = true
+        this.oldestMessageId = null
+        this.initialLoad = true
 
-        // Join new channel
-        websocketService.joinChannel(newChannelId)
+        // Clear typing users
+        this.typingUsers = []
+        this.typingTimeouts.forEach(timeout => clearTimeout(timeout))
+        this.typingTimeouts.clear()
 
-        // Load messages
-        await this.initializeMessages()
-        void this.$nextTick(() => {
-          this.scrollToBottom(false)
-        })
+        console.log('ChatPage: Messages cleared, new count:', this.messages.length)
       }
     }
   },
@@ -350,9 +357,13 @@ export default defineComponent({
       websocketService.sendMessage(this.channelId, content)
       // Message will be received back via the onMessage listener after server processes it
     },
-    handleCommand(payload: { command: string }): void {
+    handleCommand(payload: { command: string; [key: string]: unknown }): void {
       if (payload.command === 'list') {
         this.$emit('toggle-members-drawer')
+      }
+      // Ak bol príkaz cancel/quit/join/revoke, notifikuj parent o zmene kanálov
+      if (['cancel', 'quit', 'join', 'revoke'].includes(payload.command)) {
+        this.$emit('channels-changed')
       }
     },
     formatDate(date: Date): string {
@@ -394,7 +405,7 @@ export default defineComponent({
       if (index >= 0) {
         this.typingUsers.splice(index, 1)
       }
-      
+
       // Clear timeout
       const timeout = this.typingTimeouts.get(userId)
       if (timeout) {

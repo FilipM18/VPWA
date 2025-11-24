@@ -89,6 +89,7 @@
 import { defineComponent, type PropType } from 'vue'
 import type { User } from '../types'
 import websocketService from '../services/websocket'
+import { joinChannel, inviteToChannel, leaveChannel } from '../api'
 
 interface CommandHint { command: string; usage: string; description: string }
 
@@ -96,7 +97,8 @@ export default defineComponent({
   name: 'MessageInput',
   props: {
     channelId: { type: Number, required: true },
-    members: { type: Array as PropType<User[]>, default: () => [] }
+    members: { type: Array as PropType<User[]>, default: () => [] },
+    currentUserId: { type: Number, required: true }
   },
   emits: ['message-sent', 'command-executed'],
   data() {
@@ -156,13 +158,13 @@ export default defineComponent({
       // Regular message
       this.$emit('message-sent', trimmed)
       this.message = ''
-      
+
       // Stop typing indicator
       this.stopTypingIndicator()
     },
     handleInput(): void {
       console.log('handleInput called, message:', this.message)
-      
+
       // Don't send typing for commands
       if (this.message.startsWith('/')) {
         this.stopTypingIndicator()
@@ -215,10 +217,107 @@ export default defineComponent({
         return
       }
 
-      // Other commands will be implemented later
+      if (command === '/join') {
+        const channelName = parts[1]
+        const isPrivate = parts[2]?.toLowerCase() === '[private]'
+
+        if (!channelName) {
+          this.$q.notify({ type: 'warning', message: 'Použitie: /join channelName [private]' })
+          return
+        }
+
+        const token = localStorage.getItem('auth_token') || undefined
+        joinChannel(channelName, isPrivate, token)
+          .then(() => {
+            this.$q.notify({ type: 'positive', message: `Úspęšne si sa pridal do #${channelName}` })
+            this.$emit('command-executed', { command: 'join', channelName, isPrivate })
+          })
+          .catch((err: Error) => {
+            this.$q.notify({ type: 'negative', message: err.message })
+          })
+        return
+      }
+
+      if (command === '/invite') {
+        const nickName = parts[1]?.replace('@', '')
+
+        if (!nickName) {
+          this.$q.notify({ type: 'warning', message: 'Použitie: /invite @nickName' })
+          return
+        }
+
+        const user = this.members.find(m => m.nickName === nickName)
+        if (!user) {
+          this.$q.notify({ type: 'warning', message: `Používateľ @${nickName} neexistuje` })
+          return
+        }
+
+        const token = localStorage.getItem('auth_token') || undefined
+        inviteToChannel(this.channelId, user.id, token)
+          .then(() => {
+            this.$q.notify({ type: 'positive', message: `Pozvánka odoslaná pre @${nickName}` })
+          })
+          .catch((err: Error) => {
+            this.$q.notify({ type: 'negative', message: err.message })
+          })
+        return
+      }
+
+      if (command === '/revoke') {
+        const nickName = parts[1]?.replace('@', '')
+
+        if (!nickName) {
+          this.$q.notify({ type: 'warning', message: 'Použitie: /revoke @nickName' })
+          return
+        }
+
+        const user = this.members.find(m => m.nickName === nickName)
+        if (!user) {
+          this.$q.notify({ type: 'warning', message: `Používateľ @${nickName} neexistuje` })
+          return
+        }
+
+        const token = localStorage.getItem('auth_token') || undefined
+        leaveChannel(this.channelId, user.id, undefined, token)
+          .then(() => {
+            this.$q.notify({ type: 'positive', message: `@${nickName} bol odstránený z kanála` })
+            this.$emit('command-executed', { command: 'revoke', userId: user.id })
+          })
+          .catch((err: Error) => {
+            this.$q.notify({ type: 'negative', message: err.message })
+          })
+        return
+      }
+
+      if (command === '/cancel') {
+        const token = localStorage.getItem('auth_token') || undefined
+        leaveChannel(this.channelId, undefined, false, token)
+          .then(() => {
+            this.$q.notify({ type: 'positive', message: 'Opustil si kanál' })
+            this.$emit('command-executed', { command: 'cancel' })
+          })
+          .catch((err: Error) => {
+            this.$q.notify({ type: 'negative', message: err.message })
+          })
+        return
+      }
+
+      if (command === '/quit') {
+        const token = localStorage.getItem('auth_token') || undefined
+        leaveChannel(this.channelId, undefined, true, token)
+          .then(() => {
+            this.$q.notify({ type: 'positive', message: 'Kanál bol zmazaý' })
+            this.$emit('command-executed', { command: 'quit' })
+          })
+          .catch((err: Error) => {
+            this.$q.notify({ type: 'negative', message: err.message })
+          })
+        return
+      }
+
       this.$q.notify({
         type: 'info',
-        message: `Príkaz ${command} ešte nie je implementovaný`,
+        message: `Príkaz ${command} nie je rozpoznaný`,
       })
     },
     insertEmoji(emoji: string): void {

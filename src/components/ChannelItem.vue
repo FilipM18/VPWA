@@ -59,11 +59,14 @@
           </q-btn>
         </div>
 
-        <!-- Regular Menu for Active Channels -->
-        <q-btn v-else-if="isActive" flat dense round icon="more_vert" size="sm" @click.stop>
-          <q-menu auto-close>
+        <!-- Regular Menu for All Channels -->
+        <q-btn v-else flat dense round icon="more_vert" size="sm" @click.stop>
+          <q-menu ref="channelMenu">
             <q-list dense>
-              <q-item clickable @click="$emit('leave', channel)">
+              <q-item
+                clickable
+                @click="handleLeaveClick"
+              >
                 <q-item-section avatar>
                   <q-icon name="exit_to_app" />
                 </q-item-section>
@@ -72,7 +75,11 @@
 
               <template v-if="isAdmin">
                 <q-separator />
-                <q-item clickable class="text-negative" @click="$emit('delete', channel)">
+                <q-item
+                  clickable
+                  class="text-negative"
+                  @click="handleDeleteClick"
+                >
                   <q-item-section avatar>
                     <q-icon name="delete" />
                   </q-item-section>
@@ -112,6 +119,22 @@ export default defineComponent({
     }
   },
   emits: ['select', 'leave', 'delete', 'accept', 'reject'],
+  methods: {
+    handleLeaveClick() {
+      console.log('ChannelItem: handleLeaveClick called for', this.channel.name)
+      const menu = this.$refs.channelMenu as { hide: () => void } | undefined
+      menu?.hide()
+      console.log('ChannelItem: emitting leave event')
+      this.$emit('leave', this.channel)
+    },
+    handleDeleteClick() {
+      console.log('ChannelItem: handleDeleteClick called for', this.channel.name)
+      const menu = this.$refs.channelMenu as { hide: () => void } | undefined
+      menu?.hide()
+      console.log('ChannelItem: emitting delete event')
+      this.$emit('delete', this.channel)
+    }
+  }
 });
 </script>
 <style scoped>

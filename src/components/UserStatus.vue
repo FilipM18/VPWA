@@ -21,10 +21,10 @@
             rounded
             class="status-indicator"
           >
-            <q-icon 
-              v-if="userStatus === 'dnd'" 
-              name="remove" 
-              size="10px" 
+            <q-icon
+              v-if="userStatus === 'dnd'"
+              name="remove"
+              size="10px"
               color="white"
             />
           </q-badge>
@@ -113,7 +113,7 @@
           <q-separator />
 
           <!-- Logout -->
-          <q-item clickable v-ripple @click="handleLogout">
+          <q-item clickable v-ripple v-close-popup @click="handleLogout">
             <q-item-section avatar>
               <q-icon name="logout" color="negative" />
             </q-item-section>
@@ -230,16 +230,10 @@ export default defineComponent({
       this.avatarError = true
     },
     handleLogout(): void {
-      this.$q
-        .dialog({
-          title: 'Odhlásiť sa',
-          message: 'Naozaj sa chceš odhlásiť?',
-          cancel: true,
-          persistent: false
-        })
-        .onOk(() => {
-          this.$emit('logout')
-        })
+      // Priamo emit bez dialógu, alebo použiť natívny confirm
+      if (confirm('Naozaj sa chceš odhlásiť?')) {
+        this.$emit('logout')
+      }
     },
     openSettings(): void {
       this.$router.push('/settings').catch(() => {});

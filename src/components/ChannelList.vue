@@ -179,6 +179,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
+import { useQuasar } from 'quasar';
 import ChannelItem from './ChannelItem.vue';
 import type { Channel } from '../types';
 
@@ -191,6 +192,10 @@ export default defineComponent({
   name: 'ChannelList',
   components: {
     ChannelItem,
+  },
+  setup() {
+    const $q = useQuasar();
+    return { $q };
   },
   props: {
     channels: {
@@ -283,6 +288,7 @@ export default defineComponent({
       };
     },
     leaveChannel(channel: Channel): void {
+      console.log('ChannelList: leaveChannel called for', channel.name)
       this.$q
         .dialog({
           title: 'Opustiť kanál',
@@ -291,10 +297,12 @@ export default defineComponent({
           persistent: false,
         })
         .onOk(() => {
+          console.log('ChannelList: User confirmed leave, emitting channel-left')
           this.$emit('channel-left', channel);
         });
     },
     deleteChannel(channel: Channel): void {
+      console.log('ChannelList: deleteChannel called for', channel.name)
       this.$q
         .dialog({
           title: 'Zmazať kanál',
@@ -307,6 +315,7 @@ export default defineComponent({
           },
         })
         .onOk(() => {
+          console.log('ChannelList: User confirmed delete, emitting channel-deleted')
           this.$emit('channel-deleted', channel);
         });
     },
