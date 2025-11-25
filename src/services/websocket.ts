@@ -33,6 +33,11 @@ class WebSocketService {
   private typingListeners: Set<(event: TypingEvent) => void> = new Set()
   private stoppedTypingListeners: Set<(event: StoppedTypingEvent) => void> = new Set()
 
+  // Public getter for connection status
+  get connected(): boolean {
+    return this.isConnected
+  }
+
   connect(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.isConnected) {

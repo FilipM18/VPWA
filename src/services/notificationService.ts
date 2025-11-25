@@ -15,7 +15,7 @@ export interface NotificationPayload {
 
 class NotificationService {
   private permission: NotificationPermission = 'default'
-  
+
   constructor() {
     if ('Notification' in window) {
       this.permission = Notification.permission
@@ -66,9 +66,9 @@ class NotificationService {
         requireInteraction: true, // notifikácia zostane až kým ju neklikneš
         silent: false, // Povolí zvuk keby chceme :D
       }
-      
+
       const notification = new Notification(payload.title, notificationOptions)
-            
+
       notification.onerror = (error) => {
         console.error('Notification ERROR:', error)
       }
@@ -77,7 +77,7 @@ class NotificationService {
       notification.onclick = () => {
         window.focus()
         notification.close()
-        
+
         // Naviguj na správny kanál
         if (payload.data?.channelId) {
           // Emitni event pre navigation (bude ho počúvať MainLayout)
@@ -104,11 +104,12 @@ class NotificationService {
     message: Message,
     currentUser: User,
     preferences: NotificationPreferences,
-    isAppVisible: boolean
+    isAppVisible: boolean,
+    currentChannelId: number | null
   ): boolean {
-    // 1. Aplikácia je viditeľná - netreba notifikáciu
-    if (isAppVisible) {
-      console.log('REASON: App is visible (active tab)')
+    // 1. Aplikácia je viditeľná A user je v tomto kanáli - netreba notifikáciu
+    if (isAppVisible && currentChannelId === message.channelId) {
+      console.log('REASON: App is visible and user is in this channel')
       return false
     }
 
@@ -154,8 +155,8 @@ class NotificationService {
     message: Message,
     channelName: string
   ): NotificationPayload {
-    const truncatedContent = message.content.length > 100 
-      ? message.content.substring(0, 100) + '...' 
+    const truncatedContent = message.content.length > 100
+      ? message.content.substring(0, 100) + '...'
       : message.content
 
     return {

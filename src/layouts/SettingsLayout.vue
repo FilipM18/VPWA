@@ -87,7 +87,7 @@
       <!-- Desktop: Fixed Sidebar + Content -->
       <div v-if="$q.screen.gt.sm" class="row no-wrap" style="height: 100vh;">
         <!-- Desktop Sidebar -->
-        <div 
+        <div
           class="col-auto bg-grey-2"
           style="width: 260px; border-right: 1px solid #e0e0e0"
         >
@@ -214,14 +214,51 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
+import websocketService from '../services/websocket'
+import notificationService from '../services/notificationService'
+import { getCurrentUser } from '../api'
+import type { User } from '../types'
 
 export default defineComponent({
   name: 'SettingsLayout',
   data() {
     return {
       currentSection: 'profile',
-      drawerOpen: false
+      drawerOpen: false,
+      currentUser: null as User | null,
+      messageListenerUnsubscribe: null as (() => void) | null,
     };
+  },
+  async mounted() {
+    // Ensure WebSocket is connected (it should already be connected from MainLayout)
+    const token = localStorage.getItem('auth_token') || undefined
+    if (token && !websocketService.connected) {
+      try {
+        await websocketService.connect(token)
+        console.log('SettingsLayout: WebSocket connected')
+      } catch (error) {
+        console.error('SettingsLayout: Failed to connect WebSocket:', error)
+      }
+    }
+
+    // Load current user for notifications
+    if (token) {
+      try {
+        const user = await getCurrentUser(token)
+        this.currentUser = { ...user, createdAt: new Date(), updatedAt: new Date() } as User
+      } catch (err) {
+        console.warn('SettingsLayout: Failed to load current user:', err)
+      }
+    }
+
+    // Setup notification listener
+    this.setupNotificationListener()
+  },
+  beforeUnmount() {
+    // Clean up message listener
+    if (this.messageListenerUnsubscribe) {
+      this.messageListenerUnsubscribe()
+    }
   },
   computed: {
     currentSectionTitle(): string {
@@ -238,6 +275,38 @@ export default defineComponent({
     }
   },
   methods: {
+    setupNotificationListener(): void {
+      // Clean up previous listener if exists
+      if (this.messageListenerUnsubscribe) {
+        this.messageListenerUnsubscribe()
+      }
+
+      // Listen for new messages for notifications (no channel filter in settings)
+      this.messageListenerUnsubscribe = websocketService.onMessage((message) => {
+        if (!this.currentUser) return
+
+        const isAppVisible = this.$q.appVisible
+        const preferences = notificationService.getPreferences()
+
+        const mentionedUserIds = message.mentionedUserIds || []
+        const mentionsMe = mentionedUserIds.includes(this.currentUser.id)
+        const enrichedMessage = { ...message, mentionsMe }
+
+        // In settings, currentChannelId is always null, so notifications will show
+        const shouldNotify = notificationService.shouldNotify(
+          enrichedMessage,
+          this.currentUser,
+          preferences,
+          isAppVisible,
+          null // no active channel in settings
+        )
+
+        if (shouldNotify) {
+          const payload = notificationService.createMessageNotification(enrichedMessage, `Channel #${message.channelId}`)
+          notificationService.showNotification(payload)
+        }
+      })
+    },
     selectSection(section: string): void {
       this.currentSection = section;
       this.drawerOpen = false;

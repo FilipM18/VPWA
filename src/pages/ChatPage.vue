@@ -162,7 +162,14 @@ export default defineComponent({
       // Only add if it's for this channel and not already in the list
       if (message.channelId === this.channelId && !this.messages.find(m => m.id === message.id)) {
         console.log('Adding message to list')
-        this.messages = [...this.messages, message]
+        // Add mentionsMe flag
+        const mentionedUserIds = message.mentionedUserIds || []
+        const mentionsMe = mentionedUserIds.includes(this.currentUserId)
+        const enrichedMessage = {
+          ...message,
+          mentionsMe
+        }
+        this.messages = [...this.messages, enrichedMessage]
         void this.$nextTick(() => {
           this.scrollToBottom()
         })
@@ -292,7 +299,11 @@ export default defineComponent({
       try {
         const token = localStorage.getItem('auth_token') ?? undefined
         const result = await getMessages(this.channelId, token, undefined, this.pageSize)
-        this.messages = result.messages
+        // Enrich messages with mentionsMe flag
+        this.messages = result.messages.map(msg => ({
+          ...msg,
+          mentionsMe: (msg.mentionedUserIds || []).includes(this.currentUserId)
+        }))
         this.hasMore = result.hasMore
         this.oldestMessageId = result.oldestMessageId
         this.initialLoad = false
@@ -328,7 +339,12 @@ export default defineComponent({
         )
 
         if (result.messages.length > 0) {
-          this.messages = [...result.messages, ...this.messages]
+          // Enrich messages with mentionsMe flag
+          const enrichedMessages = result.messages.map(msg => ({
+            ...msg,
+            mentionsMe: (msg.mentionedUserIds || []).includes(this.currentUserId)
+          }))
+          this.messages = [...enrichedMessages, ...this.messages]
           this.hasMore = result.hasMore
           this.oldestMessageId = result.oldestMessageId
 
@@ -358,9 +374,29 @@ export default defineComponent({
       }
     },
     handleMessageSent(content: string): void {
+      // Extract mentioned user IDs from @nickName patterns
+      const mentionedUserIds = this.extractMentions(content)
+
       // Send message via WebSocket
-      websocketService.sendMessage(this.channelId, content)
+      websocketService.sendMessage(this.channelId, content, mentionedUserIds)
       // Message will be received back via the onMessage listener after server processes it
+    },
+    extractMentions(content: string): number[] {
+      const mentionRegex = /@([a-zA-Z0-9_]+)/g
+      const matches = content.matchAll(mentionRegex)
+      const userIds: number[] = []
+
+      for (const match of matches) {
+        const nickName = match[1]
+        if (!nickName) continue
+
+        const user = this.members.find((m) => m.nickName.toLowerCase() === nickName.toLowerCase())
+        if (user) {
+          userIds.push(user.id)
+        }
+      }
+
+      return [...new Set(userIds)] // Remove duplicates
     },
     handleCommand(payload: { command: string; [key: string]: unknown }): void {
       if (payload.command === 'list') {

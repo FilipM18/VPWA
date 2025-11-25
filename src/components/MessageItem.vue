@@ -38,9 +38,9 @@
             rounded
             class="status-badge"
           >
-            <q-icon 
-              name="remove" 
-              size="8px" 
+            <q-icon
+              name="remove"
+              size="8px"
               color="white"
             />
           </q-badge>
@@ -53,7 +53,7 @@
           <span v-if="message.editedAt" class="text-caption text-grey-6 q-ml-xs">
             (upravené)
           </span>
-          
+
           <!-- Message Actions -->
           <q-slide-transition>
             <div v-show="showActions" class="q-ml-sm">
@@ -141,7 +141,7 @@ export default defineComponent({
     processedContent(): string {
       const content = this.message.content || ''
       const mentionClass = this.isOwn ? 'mention-own' : 'mention-other'
-      
+
       // Replace @mentions with styled spans
       return content.replace(
         /@([A-Za-z0-9_]+)/g,
@@ -160,10 +160,12 @@ export default defineComponent({
       return author?.status
     },
     messageBgColor(): string {
-      if (this.message.mentionsMe && !this.isOwn) {
+      const mentionsMe = this.message.mentionsMe
+      const isOwn = this.isOwn
+      if (mentionsMe && !isOwn) {
         return 'amber-1'
       }
-      return this.isOwn ? 'primary' : 'grey-3'
+      return isOwn ? 'primary' : 'grey-3'
     }
   },
   methods: {
@@ -217,7 +219,7 @@ export default defineComponent({
 }
 
 :deep(.mention-own) {
-  color: #fef3c7 !important; 
+  color: #fef3c7 !important;
   font-weight: bold;
   text-decoration: underline;
 }

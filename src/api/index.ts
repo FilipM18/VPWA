@@ -197,6 +197,8 @@ type ApiMessage = {
   updatedAt?: string
   deleted_at?: string | null
   deletedAt?: string | null
+  mentioned_user_ids?: number[]
+  mentionedUserIds?: number[]
   user?: {
     id: number
     first_name?: string
@@ -243,6 +245,7 @@ function normalizeMessage(m: ApiMessage): ChatMessage {
     author: userOrAuthor?.nickName ?? userOrAuthor?.nick_name ?? 'Unknown',
     content: m.content,
     timestamp: new Date(m.createdAt ?? m.created_at ?? Date.now()),
+    mentionedUserIds: m.mentionedUserIds ?? m.mentioned_user_ids ?? [],
   }
 }
 

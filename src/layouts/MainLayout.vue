@@ -172,6 +172,7 @@ export default defineComponent({
       currentChannelId: null as number | null,
       members: [] as User[],
       typingUsers: [] as TypingUser[],
+      messageListenerUnsubscribe: null as (() => void) | null,
     };
   },
   computed: {
@@ -253,8 +254,13 @@ export default defineComponent({
     this.setupNotificationClickListener()
   },
   beforeUnmount() {
-    // Disconnect WebSocket when layout unmounts
-    websocketService.disconnect()
+    // Clean up message listener
+    if (this.messageListenerUnsubscribe) {
+      this.messageListenerUnsubscribe()
+    }
+
+    // DON'T disconnect WebSocket here - it should stay connected across layouts
+    // Only disconnect on logout (see handleLogout method)
   },
   methods: {
     async initializeApp(): Promise<void> {
@@ -495,8 +501,13 @@ export default defineComponent({
       }
     },
     setupNotificationListener(): void {
+      // Clean up previous listener if exists
+      if (this.messageListenerUnsubscribe) {
+        this.messageListenerUnsubscribe()
+      }
+
       // Počúvaj na nové správy cez WebSocket
-      websocketService.onMessage((message) => {
+      this.messageListenerUnsubscribe = websocketService.onMessage((message) => {
         console.log('Raw message from WS:', message)
 
         const isAppVisible = this.$q.appVisible
@@ -509,9 +520,9 @@ export default defineComponent({
         // Zisti názov kanála
         const channel = this.channels.find(c => c.id === message.channelId)
         const channelName = channel?.name || 'Neznámy kanál'
-        
+
         // Skontroluj či máme currentUser
-        if (!this.currentUser) { // ak je null alebo undefined 
+        if (!this.currentUser) { // ak je null alebo undefined
           console.warn('No current user, skipping notification')
           return
         }
@@ -531,7 +542,8 @@ export default defineComponent({
           enrichedMessage,
           this.currentUser,
           preferences,
-          isAppVisible
+          isAppVisible,
+          this.currentChannelId
         )
 
         console.log('Final decision:', shouldNotify ? 'SHOW NOTIFICATION' : 'NO NOTIFICATION')
@@ -539,7 +551,7 @@ export default defineComponent({
         if (shouldNotify) {
           const payload = notificationService.createMessageNotification(enrichedMessage, channelName)
           console.log('Notification payload:', payload)
-          
+
           const notification = notificationService.showNotification(payload)
           if (notification) {
             console.log('Notification shown successfully!')
