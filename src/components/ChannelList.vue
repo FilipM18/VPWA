@@ -179,7 +179,6 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
-import { useQuasar } from 'quasar';
 import ChannelItem from './ChannelItem.vue';
 import type { Channel } from '../types';
 
@@ -192,10 +191,6 @@ export default defineComponent({
   name: 'ChannelList',
   components: {
     ChannelItem,
-  },
-  setup() {
-    const $q = useQuasar();
-    return { $q };
   },
   props: {
     channels: {
@@ -289,17 +284,52 @@ export default defineComponent({
     },
     leaveChannel(channel: Channel): void {
       console.log('ChannelList: leaveChannel called for', channel.name)
-      this.$q
-        .dialog({
-          title: 'Opustiť kanál',
-          message: `Naozaj chceš opustiť kanál #${channel.name}?`,
-          cancel: true,
-          persistent: false,
-        })
-        .onOk(() => {
-          console.log('ChannelList: User confirmed leave, emitting channel-left')
-          this.$emit('channel-left', channel);
-        });
+
+      // Ak je admin, ponúkni možnosť zmazať alebo len opustiť
+      const isAdmin = channel.adminId === this.currentUserId
+
+      if (isAdmin) {
+        this.$q
+          .dialog({
+            title: 'Opustiť kanál',
+            message: `Si správca kanála #${channel.name}. Chceš kanál zmazať alebo ho len opustiť?`,
+            cancel: {
+              label: 'Zrušiť',
+              flat: true,
+            },
+            options: {
+              type: 'radio',
+              model: 'leave',
+              items: [
+                { label: 'Len opustiť (kanál ostane bez správcu)', value: 'leave' },
+                { label: 'Zmazať kanál natrvalo', value: 'delete' },
+              ],
+            },
+            persistent: false,
+          })
+          .onOk((choice: string) => {
+            if (choice === 'delete') {
+              console.log('ChannelList: Admin chose to delete channel')
+              this.$emit('channel-deleted', channel);
+            } else {
+              console.log('ChannelList: Admin chose to leave channel')
+              this.$emit('channel-left', channel);
+            }
+          });
+      } else {
+        // Nie je admin, len opustí
+        this.$q
+          .dialog({
+            title: 'Opustiť kanál',
+            message: `Naozaj chceš opustiť kanál #${channel.name}?`,
+            cancel: true,
+            persistent: false,
+          })
+          .onOk(() => {
+            console.log('ChannelList: User confirmed leave, emitting channel-left')
+            this.$emit('channel-left', channel);
+          });
+      }
     },
     deleteChannel(channel: Channel): void {
       console.log('ChannelList: deleteChannel called for', channel.name)

@@ -279,13 +279,17 @@ export async function joinChannel(
 
 export async function inviteToChannel(
   channelId: number,
-  userId: number,
+  nickNameOrUserId: string | number,
   token?: string
 ): Promise<void> {
+  const body = typeof nickNameOrUserId === 'string'
+    ? { nickName: nickNameOrUserId }
+    : { userId: nickNameOrUserId }
+
   const res = await fetch(`${API_BASE}/channels/${channelId}/invite`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify(body),
   })
 
   if (res.status === 401) throw new Error('Unauthorized')

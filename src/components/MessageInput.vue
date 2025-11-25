@@ -87,7 +87,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import type { User } from '../types'
+import type { User, Channel } from '../types'
 import websocketService from '../services/websocket'
 import { joinChannel, inviteToChannel, leaveChannel } from '../api'
 
@@ -98,7 +98,8 @@ export default defineComponent({
   props: {
     channelId: { type: Number, required: true },
     members: { type: Array as PropType<User[]>, default: () => [] },
-    currentUserId: { type: Number, required: true }
+    currentUserId: { type: Number, required: true },
+    channels: { type: Array as PropType<Channel[]>, default: () => [] }
   },
   emits: ['message-sent', 'command-executed'],
   data() {
@@ -111,8 +112,8 @@ export default defineComponent({
         { command: '/invite', usage: '@nickName', description: 'Pozvi používateľa do kanála' },
         { command: '/kick', usage: '@nickName', description: 'Vyhoď používateľa z kanála' },
         { command: '/revoke', usage: '@nickName', description: 'Odoberte prístup (iba admin)' },
-        { command: '/cancel', usage: '', description: 'Opusť kanál' },
-        { command: '/quit', usage: '', description: 'Zruš kanál (iba admin)' },
+        { command: '/cancel', usage: '[channelName]', description: 'Opusť kanál' },
+        { command: '/quit', usage: '[channelName]', description: 'Zruš kanál (iba admin)' },
         { command: '/list', usage: '', description: 'Zobraz členov kanála' }
       ] as CommandHint[],
       quickEmojis: ['👍','❤️','😂','😎','🤔','👏','🔥','🎉','💯','✅','🚀','💪'] as string[]
@@ -246,14 +247,8 @@ export default defineComponent({
           return
         }
 
-        const user = this.members.find(m => m.nickName === nickName)
-        if (!user) {
-          this.$q.notify({ type: 'warning', message: `Používateľ @${nickName} neexistuje` })
-          return
-        }
-
         const token = localStorage.getItem('auth_token') || undefined
-        inviteToChannel(this.channelId, user.id, token)
+        inviteToChannel(this.channelId, nickName, token)
           .then(() => {
             this.$q.notify({ type: 'positive', message: `Pozvánka odoslaná pre @${nickName}` })
           })
@@ -290,23 +285,98 @@ export default defineComponent({
       }
 
       if (command === '/cancel') {
-        const token = localStorage.getItem('auth_token') || undefined
-        leaveChannel(this.channelId, undefined, false, token)
-          .then(() => {
-            this.$q.notify({ type: 'positive', message: 'Opustil si kanál' })
-            this.$emit('command-executed', { command: 'cancel' })
+        const channelName = parts[1]
+        let targetChannelId = this.channelId
+        let targetChannel: Channel | undefined
+
+        if (channelName) {
+          targetChannel = this.channels.find(c => c.name === channelName)
+          if (!targetChannel) {
+            this.$q.notify({ type: 'warning', message: `Kanál #${channelName} nebol nájdený` })
+            return
+          }
+          targetChannelId = targetChannel.id
+        } else {
+          targetChannel = this.channels.find(c => c.id === this.channelId)
+        }
+
+        // Ak je admin, zobraz dialóg s výberom
+        const isAdmin = targetChannel && targetChannel.adminId === this.currentUserId
+
+        if (isAdmin) {
+          this.$q.dialog({
+            title: 'Opusť kanál',
+            message: `Si správca kanála #${targetChannel!.name}. Chceš kanál zmazať alebo ho len opusť?`,
+            cancel: {
+              label: 'Zrušiť',
+              flat: true,
+            },
+            options: {
+              type: 'radio',
+              model: 'leave',
+              items: [
+                { label: 'Len opusť (kanál ostane bez správcu)', value: 'leave' },
+                { label: 'Zmazať kanál natrvalo', value: 'delete' },
+              ],
+            },
+            persistent: false,
+          }).onOk((choice: string) => {
+            const token = localStorage.getItem('auth_token') || undefined
+            const deleteChannel = choice === 'delete'
+            leaveChannel(targetChannelId, undefined, deleteChannel, token)
+              .then(() => {
+                const msg = deleteChannel
+                  ? (channelName ? `Kanál #${channelName} bol zmazaný` : 'Kanál bol zmazaný')
+                  : (channelName ? `Opustil si kanál #${channelName}` : 'Opustil si kanál')
+                this.$q.notify({ type: 'positive', message: msg })
+                this.$emit('command-executed', { command: 'cancel' })
+              })
+              .catch((err: Error) => {
+                this.$q.notify({ type: 'negative', message: err.message })
+              })
           })
-          .catch((err: Error) => {
-            this.$q.notify({ type: 'negative', message: err.message })
-          })
+        } else {
+          // Nie je admin, len opusť
+          const token = localStorage.getItem('auth_token') || undefined
+          leaveChannel(targetChannelId, undefined, false, token)
+            .then(() => {
+              this.$q.notify({ type: 'positive', message: channelName ? `Opustil si kanál #${channelName}` : 'Opustil si kanál' })
+              this.$emit('command-executed', { command: 'cancel' })
+            })
+            .catch((err: Error) => {
+              this.$q.notify({ type: 'negative', message: err.message })
+            })
+        }
         return
       }
 
       if (command === '/quit') {
+        const channelName = parts[1]
+        let targetChannelId = this.channelId
+        let targetChannel: Channel | undefined
+
+        if (channelName) {
+          targetChannel = this.channels.find(c => c.name === channelName)
+          if (!targetChannel) {
+            this.$q.notify({ type: 'warning', message: `Kanál #${channelName} nebol nájdený` })
+            return
+          }
+          targetChannelId = targetChannel.id
+        } else {
+          targetChannel = this.channels.find(c => c.id === this.channelId)
+        }
+
+        // Skontrolovať či je admin
+        const isAdmin = targetChannel && targetChannel.adminId === this.currentUserId
+        if (!isAdmin) {
+          this.$q.notify({ type: 'warning', message: '/quit môže použiť iba správca kanála' })
+          return
+        }
+
         const token = localStorage.getItem('auth_token') || undefined
-        leaveChannel(this.channelId, undefined, true, token)
+        leaveChannel(targetChannelId, undefined, true, token)
           .then(() => {
-            this.$q.notify({ type: 'positive', message: 'Kanál bol zmazaý' })
+            this.$q.notify({ type: 'positive', message: channelName ? `Kanál #${channelName} bol zmazaný` : 'Kanál bol zmazaný' })
             this.$emit('command-executed', { command: 'quit' })
           })
           .catch((err: Error) => {

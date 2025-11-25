@@ -74,6 +74,7 @@
         :channel-id="channelId"
         :current-user-id="currentUser.id"
         :members="members"
+        :channels="channels"
         @message-sent="(content: string) => handleMessageSent(content)"
         @command-executed="handleCommand"
       />
@@ -85,7 +86,7 @@
 import { defineComponent, type PropType } from 'vue'
 import type { QScrollArea } from 'quasar'
 import MessageInput from '../components/MessageInput.vue'
-import type { User, ChatMessage, TypingUser } from '../types'
+import type { User, ChatMessage, TypingUser, Channel } from '../types'
 import MessageItem from '../components/MessageItem.vue'
 import TypingIndicator from '../components/TypingIndicator.vue'
 import { getMessages } from '../api'
@@ -113,6 +114,10 @@ export default defineComponent({
     },
     members: {
       type: Array as PropType<User[]>,
+      default: () => []
+    },
+    channels: {
+      type: Array as PropType<Channel[]>,
       default: () => []
     }
   },

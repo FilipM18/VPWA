@@ -114,9 +114,11 @@
     <q-page-container>
       <router-view
         v-if="currentChannelId && currentUser"
+        :key="`channel-${currentChannelId}`"
         :channel-id="currentChannelId"
         :current-user="currentUser"
         :members="members"
+        :channels="channels"
         @message-sent="handleMessageSent"
         @toggle-members-drawer="toggleRightDrawer"
         @channels-changed="handleChannelsChanged"
