@@ -2,6 +2,35 @@
   <div class="notification-settings">
     <div class="text-h5 text-weight-bold q-mb-lg">Nastavenia notifikácií</div>
 
+    <!-- Browser Permission Card -->
+    <q-card flat bordered class="q-mb-md" :class="permissionCardClass">
+      <q-card-section>
+        <div class="row items-center justify-between">
+          <div class="col">
+            <div class="text-subtitle1 text-weight-medium">
+              <q-icon :name="permissionIcon" :color="permissionColor" class="q-mr-sm" />
+              Browser notifikácie
+            </div>
+            <div class="text-caption text-grey-7">
+              {{ permissionText }}
+            </div>
+          </div>
+          <q-btn
+            v-if="notificationPermission !== 'granted'"
+            :label="notificationPermission === 'denied' ? 'Blokované' : 'Povoliť'"
+            :color="notificationPermission === 'denied' ? 'grey' : 'primary'"
+            :disable="notificationPermission === 'denied'"
+            @click="requestNotificationPermission"
+          >
+            <q-tooltip v-if="notificationPermission === 'denied'">
+              Notifikácie sú blokované v prehliadači. Povoľ ich v nastaveniach.
+            </q-tooltip>
+          </q-btn>
+          <q-badge v-else color="positive" label="Povolené" class="q-px-md q-py-xs" />
+        </div>
+      </q-card-section>
+    </q-card>
+
     <!-- DND Mode Card -->
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
@@ -153,6 +182,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import type { NotificationPreferences } from '../../types';
+import notificationService from '../../services/notificationService';
 
 export default defineComponent({
   name: 'NotificationSettings',
@@ -173,8 +203,35 @@ export default defineComponent({
         channelInvites: this.notificationSettings.channelInvites ?? true,
         soundEnabled: this.notificationSettings.soundEnabled ?? true,
         soundVolume: this.notificationSettings.soundVolume ?? 70
-      }
+      },
+      notificationPermission: notificationService.getPermission()
     };
+  },
+  computed: {
+    permissionIcon(): string {
+      if (this.notificationPermission === 'granted') return 'check_circle'
+      if (this.notificationPermission === 'denied') return 'block'
+      return 'notifications'
+    },
+    permissionColor(): string {
+      if (this.notificationPermission === 'granted') return 'positive'
+      if (this.notificationPermission === 'denied') return 'negative'
+      return 'grey'
+    },
+    permissionText(): string {
+      if (this.notificationPermission === 'granted') {
+        return 'Browser notifikácie sú povolené a fungujú'
+      }
+      if (this.notificationPermission === 'denied') {
+        return 'Browser notifikácie sú blokované. Povoľ ich v nastaveniach prehliadača.'
+      }
+      return 'Klikni na tlačidlo pre povolenie browser notifikácií'
+    },
+    permissionCardClass(): string {
+      if (this.notificationPermission === 'granted') return 'bg-green-1'
+      if (this.notificationPermission === 'denied') return 'bg-red-1'
+      return ''
+    }
   },
   watch: {
     'localSettings.enableDndMode'(newValue: boolean) {
@@ -186,9 +243,42 @@ export default defineComponent({
     }
   },
   methods: {
+    async requestNotificationPermission(): Promise<void> {
+      const permission = await notificationService.requestPermission()
+      this.notificationPermission = permission
+
+      if (permission === 'granted') {
+        this.$q.notify({
+          type: 'positive',
+          message: 'Notifikácie boli úspešne povolené',
+          position: 'top'
+        })
+
+        // Ukážka notifikácie
+        notificationService.showNotification({
+          title: 'ChatFlow Notifikácie',
+          body: 'Notifikácie sú teraz aktívne!',
+          icon: '/icons/favicon-128x128.png'
+        })
+      } else if (permission === 'denied') {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Notifikácie boli blokované. Povoľ ich v nastaveniach prehliadača.',
+          position: 'top'
+        })
+      }
+    },
     handleSettingsChange(): void {
-      console.log('Notification settings changed (static - no backend)', this.localSettings);
+      notificationService.savePreferences(this.localSettings)
+      
       this.$emit('update-settings', this.localSettings);
+      
+      this.$q.notify({
+        type: 'info',
+        message: 'Nastavenia boli uložené',
+        position: 'top',
+        timeout: 1000
+      })
     }
   }
 });

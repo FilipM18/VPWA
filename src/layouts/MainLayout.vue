@@ -149,6 +149,7 @@ import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingUser } from '../types';
 import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel } from '../api'
 import websocketService from '../services/websocket'
+import notificationService from '../services/notificationService'
 
 type ChannelWithMeta = Channel & {
   lastMessage?: string;
@@ -231,6 +232,9 @@ export default defineComponent({
         console.log('Connecting WebSocket with token...')
         await websocketService.connect(token)
         console.log('WebSocket connected successfully')
+
+        // Setup notification listener for new messages
+        this.setupNotificationListener()
       } catch (error) {
         console.error('Failed to connect WebSocket:', error)
         this.$q.notify({
@@ -245,6 +249,8 @@ export default defineComponent({
 
     // Now load data after WebSocket is ready
     await this.loadInitialData()
+    // Listen for notification clicks to navigate to channel
+    this.setupNotificationClickListener()
   },
   beforeUnmount() {
     // Disconnect WebSocket when layout unmounts
@@ -487,6 +493,73 @@ export default defineComponent({
           message: err instanceof Error ? err.message : 'Nepodarilo sa zmazať kanál',
         })
       }
+    },
+    setupNotificationListener(): void {
+      // Počúvaj na nové správy cez WebSocket
+      websocketService.onMessage((message) => {
+        console.log('Raw message from WS:', message)
+
+        const isAppVisible = this.$q.appVisible
+        console.log('App visibility ($q.appVisible):', isAppVisible)
+
+        // Získaj user preferences
+        const preferences = notificationService.getPreferences()
+        console.log('User preferences from localStorage:', preferences)
+
+        // Zisti názov kanála
+        const channel = this.channels.find(c => c.id === message.channelId)
+        const channelName = channel?.name || 'Neznámy kanál'
+        
+        // Skontroluj či máme currentUser
+        if (!this.currentUser) { // ak je null alebo undefined 
+          console.warn('No current user, skipping notification')
+          return
+        }
+        console.log('Current user:', {
+          id: this.currentUser.id,
+          nickName: this.currentUser.nickName,
+          status: this.currentUser.status
+        })
+
+        const mentionedUserIds = message.mentionedUserIds || []
+        const mentionsMe = mentionedUserIds.includes(this.currentUser.id)
+
+        const enrichedMessage = { ...message, mentionsMe }
+
+        // Rozhodnutie či notifikovať
+        const shouldNotify = notificationService.shouldNotify(
+          enrichedMessage,
+          this.currentUser,
+          preferences,
+          isAppVisible
+        )
+
+        console.log('Final decision:', shouldNotify ? 'SHOW NOTIFICATION' : 'NO NOTIFICATION')
+
+        if (shouldNotify) {
+          const payload = notificationService.createMessageNotification(enrichedMessage, channelName)
+          console.log('Notification payload:', payload)
+          
+          const notification = notificationService.showNotification(payload)
+          if (notification) {
+            console.log('Notification shown successfully!')
+          } else {
+            console.error('Failed to show notification (permission issue?)')
+          }
+        }
+      })
+    },
+    setupNotificationClickListener(): void {
+      window.addEventListener('notification-clicked', (event: Event) => {
+        const customEvent = event as CustomEvent<{ channelId: number }>
+        const { channelId } = customEvent.detail
+
+        // Nájdi kanál a prepni naň
+        const channel = this.channels.find(c => c.id === channelId)
+        if (channel) {
+          this.selectChannel(channel)
+        }
+      })
     },
   },
 });

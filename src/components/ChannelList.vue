@@ -8,7 +8,7 @@
       class="text-white"
     >
       <q-avatar size="40px">
-        <q-icon name="forum" color="white" />
+        <img src="../../public/icons/ChatFlowLogo2.png" alt="Logo">
       </q-avatar>
       <q-toolbar-title class="text-white"> ChatFlow </q-toolbar-title>
 
