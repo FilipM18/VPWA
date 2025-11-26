@@ -20,11 +20,15 @@
     >
       <template v-slot:name>{{ message.author }}</template>
       <template v-slot:avatar>
-        <q-avatar size="40px">
+        <q-avatar size="40px" :color="authorAvatar ? undefined : 'accent'" text-color="white">
           <img
+            v-if="authorAvatar"
             :src="authorAvatar"
             :alt="message.author"
           />
+          <template v-else>
+            {{ authorInitial }}
+          </template>
           <q-badge
             v-if="authorStatus === 'online'"
             color="positive"
@@ -154,6 +158,13 @@ export default defineComponent({
         return author.avatarUrl
       }
       return ''
+    },
+    authorInitial(): string {
+      const author = this.users.find(u => u.id === this.message.authorId)
+      if (author?.nickName) {
+        return author.nickName.charAt(0).toUpperCase()
+      }
+      return this.message.author?.charAt(0)?.toUpperCase() || 'U'
     },
     authorStatus(): string | undefined {
       const author = this.users.find(u => u.id === this.message.authorId)

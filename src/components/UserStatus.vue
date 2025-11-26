@@ -4,17 +4,17 @@
     <q-btn flat no-caps class="col" :padding="$q.screen.lt.sm ? '8px 8px' : '8px 12px'">
       <div class="row items-center no-wrap full-width">
         <q-avatar size="40px">
+          <img
+            v-if="currentUser?.avatarUrl && !avatarError"
+            :src="currentUser.avatarUrl"
+            @error="handleAvatarError"
+          >
           <div
-            v-if="!currentUser?.avatarUrl"
+            v-else
             class="absolute-full flex flex-center bg-accent text-white"
           >
             {{ userInitial }}
           </div>
-          <img
-            v-else
-            :src="currentUser.avatarUrl"
-            @error="handleAvatarError"
-          >
           <q-badge
             :color="statusColor"
             floating
@@ -43,7 +43,15 @@
         <!-- User Info -->
         <q-card-section class="row items-center no-wrap">
           <q-avatar size="50px">
-            <div class="absolute-full flex flex-center bg-accent text-white ">
+            <img
+              v-if="currentUser?.avatarUrl && !avatarError"
+              :src="currentUser.avatarUrl"
+              @error="handleAvatarError"
+            >
+            <div
+              v-else
+              class="absolute-full flex flex-center bg-accent text-white"
+            >
               {{ userInitial }}
             </div>
           </q-avatar>
@@ -113,7 +121,7 @@
           <q-separator />
 
           <!-- Logout -->
-          <q-item clickable v-ripple v-close-popup @click="handleLogout">
+          <q-item clickable v-ripple @click="handleLogout">
             <q-item-section avatar>
               <q-icon name="logout" color="negative" />
             </q-item-section>
@@ -230,13 +238,31 @@ export default defineComponent({
       this.avatarError = true
     },
     handleLogout(): void {
-      // Priamo emit bez dialógu, alebo použiť natívny confirm
-      if (confirm('Naozaj sa chceš odhlásiť?')) {
+      this.$q.dialog({
+        title: 'Odhlásenie',
+        message: 'Naozaj sa chceš odhlásiť?',
+        cancel: {
+          label: 'Zrušiť',
+          flat: true,
+          color: 'primary',
+        },
+        ok: {
+          label: 'Odhlásiť',
+          color: 'negative',
+          flat: true,
+        },
+        persistent: false,
+      }).onOk(() => {
         this.$emit('logout')
-      }
+      })
     },
     openSettings(): void {
       this.$router.push('/settings').catch(() => {});
+    }
+  },
+  watch: {
+    'currentUser.avatarUrl'() {
+      this.avatarError = false
     }
   }
 })

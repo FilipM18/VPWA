@@ -8,7 +8,7 @@ export interface User {
   status: UserStatus
   createdAt?: Date
   updatedAt?: Date
-  avatarUrl?: string
+  avatarUrl?: string | undefined
 }
 
 export type UserStatus = 'online' | 'dnd' | 'offline'

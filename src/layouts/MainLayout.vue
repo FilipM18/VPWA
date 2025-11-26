@@ -122,6 +122,7 @@
         @message-sent="handleMessageSent"
         @toggle-members-drawer="toggleRightDrawer"
         @channels-changed="handleChannelsChanged"
+        @member-kicked="handleMemberKicked"
       />
 
       <!-- Empty state when no channel selected -->
@@ -374,6 +375,12 @@ export default defineComponent({
     },
     handleMessageSent(message: ChatMessage): void {
       console.log('Message sent:', message);
+    },
+    handleMemberKicked(userId: number): void {
+      const index = this.members.findIndex(m => m.id === userId)
+      if (index >= 0) {
+        this.members.splice(index, 1)
+      }
     },
     async handleChannelsChanged(): Promise<void> {
       // Clear current channel and reload (same as leave/delete handlers)

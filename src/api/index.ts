@@ -83,7 +83,7 @@ function normalizeUser(u: ApiChannelMember['user']): User | undefined {
     nickName: u.nickName ?? u.nick_name ?? '',
     email: u.email ?? '',
     status: (u.status as 'online' | 'dnd' | 'offline') ?? 'offline',
-    avatarUrl: u.avatarUrl ?? u.avatar_url ?? '',
+    avatarUrl: u.avatarUrl ?? u.avatar_url ?? undefined,
   }
 }
 
@@ -180,6 +180,19 @@ export async function rejectInvitation(channelId: number, token?: string): Promi
     const txt = await res.text()
     throw new Error(`Failed to reject invitation: ${res.status} ${txt}`)
   }
+}
+
+export async function kickMember(channelId: number, nickName: string, token?: string): Promise<{ message: string; banned: boolean; kickVotes: number; userId?: number }> {
+  const res = await fetch(`${API_BASE}/channels/${channelId}/kick`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ nickName }),
+  })
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Failed to kick member: ${res.status} ${txt}`)
+  }
+  return await res.json()
 }
 
 type ApiMessage = {

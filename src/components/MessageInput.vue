@@ -89,7 +89,7 @@
 import { defineComponent, type PropType } from 'vue'
 import type { User, Channel } from '../types'
 import websocketService from '../services/websocket'
-import { joinChannel, inviteToChannel, leaveChannel } from '../api'
+import { joinChannel, inviteToChannel, leaveChannel, kickMember } from '../api'
 
 interface CommandHint { command: string; usage: string; description: string }
 
@@ -109,8 +109,8 @@ export default defineComponent({
       isTyping: false,
       commands: [
         { command: '/join', usage: 'channelName [private]', description: 'Vytvor alebo sa pripoj do kanála' },
-        { command: '/invite', usage: '@nickName', description: 'Pozvi používateľa do kanála' },
-        { command: '/kick', usage: '@nickName', description: 'Vyhoď používateľa z kanála' },
+        { command: '/invite', usage: '@nickName', description: 'Pozvi používateľa (admin: unban)' },
+        { command: '/kick', usage: '@nickName', description: 'Hlasuj o vyhodení (admin: insta ban)' },
         { command: '/revoke', usage: '@nickName', description: 'Odoberte prístup (iba admin)' },
         { command: '/cancel', usage: '[channelName]', description: 'Opusť kanál' },
         { command: '/quit', usage: '[channelName]', description: 'Zruš kanál (iba admin)' },
@@ -255,6 +255,19 @@ export default defineComponent({
           .catch((err: Error) => {
             this.$q.notify({ type: 'negative', message: err.message })
           })
+        return
+      }
+
+      if (command === '/kick') {
+        const nickName = parts[1]?.replace('@', '')
+
+        if (!nickName) {
+          this.$q.notify({ type: 'warning', message: 'Použitie: /kick @nickName' })
+          return
+        }
+
+        const token = localStorage.getItem('auth_token') || undefined
+        this.kickMember(nickName, token)
         return
       }
 
@@ -405,6 +418,26 @@ export default defineComponent({
         const first = this.filteredCommands[0]
         if (first) this.selectCommand(first)
       }
+    },
+    kickMember(nickName: string, token?: string): void {
+      kickMember(this.channelId, nickName, token)
+        .then((result) => {
+          if (result.banned) {
+            this.$q.notify({
+              type: 'positive',
+              message: `@${nickName} bol vyhodený z kanála (${result.kickVotes} hlasov)`,
+            })
+            this.$emit('command-executed', { command: 'kick', nickName, banned: true, userId: result.userId })
+          } else {
+            this.$q.notify({
+              type: 'info',
+              message: `Hlas pre vyhodenie @${nickName} zaznamenaný (${result.kickVotes}/3)`,
+            })
+          }
+        })
+        .catch((err: Error) => {
+          this.$q.notify({ type: 'negative', message: err.message })
+        })
     }
   },
   watch: {

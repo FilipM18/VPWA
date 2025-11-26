@@ -121,7 +121,7 @@ export default defineComponent({
       default: () => []
     }
   },
-  emits: ['message-sent', 'toggle-members-drawer', 'channels-changed'],
+  emits: ['message-sent', 'toggle-members-drawer', 'channels-changed', 'member-kicked'],
   data() {
     return {
       messages: [] as ChatMessage[],
@@ -402,9 +402,16 @@ export default defineComponent({
       if (payload.command === 'list') {
         this.$emit('toggle-members-drawer')
       }
-      // Ak bol príkaz cancel/quit/join/revoke, notifikuj parent o zmene kanálov
-      if (['cancel', 'quit', 'join', 'revoke'].includes(payload.command)) {
+      // Ak bol príkaz cancel/quit/join, notifikuj parent o zmene kanálov
+      if (['cancel', 'quit', 'join'].includes(payload.command)) {
         this.$emit('channels-changed')
+      }
+      // Ak bol user odstránený (revoke alebo kick), odstráň ho zo zoznamu členov
+      if (payload.command === 'revoke' && payload.userId) {
+        this.$emit('member-kicked', payload.userId as number)
+      }
+      if (payload.command === 'kick' && payload.banned && payload.userId) {
+        this.$emit('member-kicked', payload.userId as number)
       }
     },
     formatDate(date: Date): string {
