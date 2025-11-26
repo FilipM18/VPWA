@@ -20,6 +20,23 @@ export interface StoppedTypingEvent {
   channelId: number
 }
 
+export interface UserKickedEvent {
+  channelId: number
+  channelName: string
+  reason: string
+}
+
+export interface ChannelInvitedEvent {
+  channelId: number
+  channelName: string
+  invitedBy: string
+}
+
+export interface ChannelDeletedEvent {
+  channelId: number
+  channelName: string
+}
+
 class WebSocketService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private socket: any = null
@@ -32,6 +49,9 @@ class WebSocketService {
   private userLeftListeners: Set<(event: UserJoinedEvent) => void> = new Set()
   private typingListeners: Set<(event: TypingEvent) => void> = new Set()
   private stoppedTypingListeners: Set<(event: StoppedTypingEvent) => void> = new Set()
+  private userKickedListeners: Set<(event: UserKickedEvent) => void> = new Set()
+  private channelInvitedListeners: Set<(event: ChannelInvitedEvent) => void> = new Set()
+  private channelDeletedListeners: Set<(event: ChannelDeletedEvent) => void> = new Set()
 
   // Public getter for connection status
   get connected(): boolean {
@@ -102,6 +122,22 @@ class WebSocketService {
       this.socket.on('user_stopped_typing', (event: StoppedTypingEvent) => {
         console.log('Received user_stopped_typing event:', event)
         this.stoppedTypingListeners.forEach((listener) => listener(event))
+      })
+
+      // Kick/ban and invite events
+      this.socket.on('user_kicked', (event: UserKickedEvent) => {
+        console.log('Received user_kicked event:', event)
+        this.userKickedListeners.forEach((listener) => listener(event))
+      })
+
+      this.socket.on('channel_invited', (event: ChannelInvitedEvent) => {
+        console.log('Received channel_invited event:', event)
+        this.channelInvitedListeners.forEach((listener) => listener(event))
+      })
+
+      this.socket.on('channel_deleted', (event: ChannelDeletedEvent) => {
+        console.log('Received channel_deleted event:', event)
+        this.channelDeletedListeners.forEach((listener) => listener(event))
       })
 
       // Connection timeout
@@ -212,6 +248,21 @@ class WebSocketService {
   onStoppedTyping(callback: (event: StoppedTypingEvent) => void): () => void {
     this.stoppedTypingListeners.add(callback)
     return () => this.stoppedTypingListeners.delete(callback)
+  }
+
+  onUserKicked(callback: (event: UserKickedEvent) => void): () => void {
+    this.userKickedListeners.add(callback)
+    return () => this.userKickedListeners.delete(callback)
+  }
+
+  onChannelInvited(callback: (event: ChannelInvitedEvent) => void): () => void {
+    this.channelInvitedListeners.add(callback)
+    return () => this.channelInvitedListeners.delete(callback)
+  }
+
+  onChannelDeleted(callback: (event: ChannelDeletedEvent) => void): () => void {
+    this.channelDeletedListeners.add(callback)
+    return () => this.channelDeletedListeners.delete(callback)
   }
 
   isSocketConnected(): boolean {
