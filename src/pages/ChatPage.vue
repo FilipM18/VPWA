@@ -324,10 +324,18 @@ export default defineComponent({
       }
 
       const scrollArea = this.$refs.scrollArea as QScrollArea | undefined
-      const target = scrollArea?.getScrollTarget()
-      const previousHeight = target?.scrollHeight ?? 0
+      const target = scrollArea?.getScrollTarget() as HTMLElement | undefined
+
+      if (!target) {
+        done(true)
+        return
+      }
 
       this.loadingOlder = true
+
+      // 1) zapamätaj si „anchor“ – prvú aktuálne zobrazenú správu
+      const firstVisibleMessage = this.messages[0]
+      const anchorId = firstVisibleMessage?.id
 
       try {
         const token = localStorage.getItem('auth_token') ?? undefined
@@ -338,30 +346,36 @@ export default defineComponent({
           this.pageSize
         )
 
-        if (result.messages.length > 0) {
-          // Enrich messages with mentionsMe flag
-          const enrichedMessages = result.messages.map(msg => ({
-            ...msg,
-            mentionsMe: (msg.mentionedUserIds || []).includes(this.currentUserId)
-          }))
-          this.messages = [...enrichedMessages, ...this.messages]
-          this.hasMore = result.hasMore
-          this.oldestMessageId = result.oldestMessageId
-
-          void this.$nextTick(() => {
-            if (scrollArea && target) {
-              const newHeight = target.scrollHeight
-              const diff = newHeight - previousHeight
-              const currentPosition = target.scrollTop
-              scrollArea.setScrollPosition('vertical', currentPosition + diff, 0)
-            }
-            this.loadingOlder = false
-            done(!this.hasMore)
-          })
-        } else {
+        if (result.messages.length === 0) {
           this.loadingOlder = false
           done(true)
+          return
         }
+
+        const enrichedMessages = result.messages.map(msg => ({
+          ...msg,
+          mentionsMe: (msg.mentionedUserIds || []).includes(this.currentUserId)
+        }))
+
+        // 2) prepend staršie správy
+        this.messages = [...enrichedMessages, ...this.messages]
+        this.hasMore = result.hasMore
+        this.oldestMessageId = result.oldestMessageId
+
+        await this.$nextTick()
+
+        // 3) ak anchor existuje, scrollni k nemu – tým zachováš relatívnu pozíciu
+        if (anchorId && scrollArea) {
+          const el = (this.$el as Element).querySelector<HTMLDivElement>(`[data-message-id="${anchorId}"]`)
+          if (el) {
+            // posuň tak, aby anchor ostal na tom istom mieste v okne
+            const topBefore = el.getBoundingClientRect().top
+            scrollArea.setScrollPosition('vertical', target.scrollTop + (el.getBoundingClientRect().top - topBefore), 0)
+          }
+        }
+
+        this.loadingOlder = false
+        done(!this.hasMore)
       } catch (error) {
         console.error('Failed to load older messages:', error)
         this.$q.notify({

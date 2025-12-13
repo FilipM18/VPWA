@@ -22,19 +22,24 @@ export interface StoppedTypingEvent {
 
 export interface UserKickedEvent {
   channelId: number
-  channelName: string
+  channelName?: string  // Present when this event is for ME (I was kicked)
   reason: string
+  userId?: number  // Present when SOMEONE ELSE was kicked (for member list update)
+  nickName?: string  // Present when SOMEONE ELSE was kicked
+  kickedBy?: string  // Who kicked the user
 }
 
 export interface ChannelInvitedEvent {
   channelId: number
   channelName: string
   invitedBy: string
+  isPrivate?: boolean
 }
 
 export interface ChannelDeletedEvent {
   channelId: number
   channelName: string
+  deletedBy?: string
 }
 
 class WebSocketService {
