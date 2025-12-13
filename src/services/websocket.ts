@@ -42,6 +42,15 @@ export interface ChannelDeletedEvent {
   deletedBy?: string
 }
 
+export interface KickVoteUpdateEvent {
+  channelId: number
+  userId: number
+  nickName: string
+  kickVotes: number
+  kickVoters: number[]
+  votedBy: string
+}
+
 class WebSocketService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private socket: any = null
@@ -57,6 +66,7 @@ class WebSocketService {
   private userKickedListeners: Set<(event: UserKickedEvent) => void> = new Set()
   private channelInvitedListeners: Set<(event: ChannelInvitedEvent) => void> = new Set()
   private channelDeletedListeners: Set<(event: ChannelDeletedEvent) => void> = new Set()
+  private kickVoteUpdateListeners: Set<(event: KickVoteUpdateEvent) => void> = new Set()
 
   // Public getter for connection status
   get connected(): boolean {
@@ -143,6 +153,11 @@ class WebSocketService {
       this.socket.on('channel_deleted', (event: ChannelDeletedEvent) => {
         console.log('Received channel_deleted event:', event)
         this.channelDeletedListeners.forEach((listener) => listener(event))
+      })
+
+      this.socket.on('kick_vote_updated', (event: KickVoteUpdateEvent) => {
+        console.log('Received kick_vote_updated event:', event)
+        this.kickVoteUpdateListeners.forEach((listener) => listener(event))
       })
 
       // Connection timeout
@@ -268,6 +283,11 @@ class WebSocketService {
   onChannelDeleted(callback: (event: ChannelDeletedEvent) => void): () => void {
     this.channelDeletedListeners.add(callback)
     return () => this.channelDeletedListeners.delete(callback)
+  }
+
+  onKickVoteUpdate(callback: (event: KickVoteUpdateEvent) => void): () => void {
+    this.kickVoteUpdateListeners.add(callback)
+    return () => this.kickVoteUpdateListeners.delete(callback)
   }
 
   isSocketConnected(): boolean {

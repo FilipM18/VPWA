@@ -107,7 +107,7 @@
       :breakpoint="600"
       class="drawer-container"
     >
-      <member-list :members="members" :is-admin="isChannelAdmin" @close="$q.screen.lt.md && (rightDrawerOpen = false)" />
+      <member-list :members="members" :is-admin="isChannelAdmin" :channel-id="currentChannelId || 0" @close="$q.screen.lt.md && (rightDrawerOpen = false)" />
     </q-drawer>
 
     <!-- Page Container for Messages - takes full space between drawers -->
@@ -148,7 +148,7 @@ import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingUser } from '../types';
-import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel } from '../api'
+import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel, type MemberWithUser } from '../api'
 import websocketService from '../services/websocket'
 import notificationService from '../services/notificationService'
 
@@ -171,7 +171,7 @@ export default defineComponent({
       currentUser: null as User | null,
       channels: [] as ChannelWithMeta[],
       currentChannelId: null as number | null,
-      members: [] as User[],
+      members: [] as MemberWithUser[],
       typingUsers: [] as TypingUser[],
       messageListenerUnsubscribe: null as (() => void) | null,
       userJoinedListenerUnsubscribe: null as (() => void) | null,
@@ -338,7 +338,7 @@ export default defineComponent({
 
       const token = localStorage.getItem('auth_token') || undefined
       getChannelMembers(id, token)
-        .then((members: User[]) => {
+        .then((members: MemberWithUser[]) => {
           this.members = members;
         })
         .catch((err: Error) => {
@@ -740,6 +740,30 @@ export default defineComponent({
         }
       })
       console.log('Channel deleted listener set up successfully')
+
+      // Listen for kick vote updates
+      websocketService.onKickVoteUpdate((event) => {
+        console.log('Kick vote updated:', event)
+
+        // Only update if we're in the same channel
+        if (this.currentChannelId !== event.channelId) return
+
+        // Update the member's kickVotes count and voters list
+        const member = this.members.find(m => m.id === event.userId)
+        if (member) {
+          member.kickVotes = event.kickVotes
+          member.kickVoters = event.kickVoters
+          this.$forceUpdate() // Force re-render to update computed properties
+          
+          this.$q.notify({
+            type: 'info',
+            message: `Hlas pre vyhodenie @${event.nickName} zaznamenaný (${event.kickVotes}/3)`,
+            caption: `Od: ${event.votedBy}`,
+            position: 'top',
+            timeout: 3000
+          })
+        }
+      })
     },
     setupMemberJoinLeaveListeners(): void {
       // Listen for users joining the channel
