@@ -598,65 +598,69 @@ export default defineComponent({
     },
     setupKickBanListener(): void {
       websocketService.onUserKicked((event) => {
-        console.log('🔴 User was kicked from channel:', event)
+        console.log('User kicked event:', event)
 
-        // Convert channelId to number for proper comparison
-        const channelId = Number(event.channelId)
-        console.log('Channel ID (converted to number):', channelId, 'Current channel:', this.currentChannelId)
+        // Check if this event has channelName (means it's for ME - I was kicked)
+        if (event.channelName) {
+          // I WAS KICKED from this channel
+          const channelId = Number(event.channelId)
+          console.log('I was kicked from channel:', channelId)
 
-        // Show notification to user
-        this.$q.notify({
-          type: 'warning',
-          message: `Bol si vykopnutý z kanála #${event.channelName}`,
-          caption: event.reason,
-          position: 'top',
-          timeout: 5000
-        })
-
-        // Check if we were kicked from current channel (use number comparison)
-        const wasCurrentChannel = this.currentChannelId === channelId
-        console.log('Was current channel?', wasCurrentChannel)
-
-        // Remove channel from list using number comparison
-        const channelIndex = this.channels.findIndex(c => c.id === channelId)
-        console.log('Channel index found:', channelIndex)
-
-        if (channelIndex !== -1) {
-          console.log('Removing channel at index', channelIndex)
-          this.channels.splice(channelIndex, 1)
-          console.log('Channels after splice:', this.channels.length)
-          this.$forceUpdate()
-        } else {
-          console.error('Channel not found in list even with number conversion!')
-        }
-
-        // If we were kicked from current channel, switch to another one
-        if (wasCurrentChannel) {
-          console.log('Preparing to switch to another channel...')
-          this.currentChannelId = null
-          this.members = []
-
-          // Use nextTick to ensure channels list is updated first
-          void this.$nextTick(() => {
-            console.log('Inside nextTick - channels available:', this.channels.length)
-            if (this.channels.length > 0) {
-              const firstChannel = this.channels[0]
-              if (firstChannel) {
-                console.log('Switching to first available channel:', firstChannel.name)
-                this.selectChannel(firstChannel)
-              }
-            } else {
-              console.log('No channels left after being kicked')
-            }
+          this.$q.notify({
+            type: 'warning',
+            message: `Bol si vykopnutý z kanála #${event.channelName}`,
+            caption: event.reason,
+            position: 'top',
+            timeout: 5000
           })
+
+          // Check if it was current channel
+          const wasCurrentChannel = this.currentChannelId === channelId
+
+          // Remove channel from list
+          const channelIndex = this.channels.findIndex(c => c.id === channelId)
+          if (channelIndex !== -1) {
+            this.channels.splice(channelIndex, 1)
+          }
+
+          // If it was current channel, switch to another one
+          if (wasCurrentChannel) {
+            this.currentChannelId = null
+            this.members = []
+
+            void this.$nextTick(() => {
+              if (this.channels.length > 0 && this.channels[0]) {
+                this.selectChannel(this.channels[0])
+              }
+            })
+          }
         } else {
-          console.log('Not current channel, no need to switch')
+          // SOMEONE ELSE was kicked from current channel
+          // Update member list by removing the kicked user
+          if (event.userId && this.currentChannelId === event.channelId) {
+            console.log(`User ${event.nickName} was kicked from current channel`)
+            
+            const memberIndex = this.members.findIndex(m => m.id === event.userId)
+            if (memberIndex >= 0) {
+              this.members.splice(memberIndex, 1)
+              console.log(`Removed ${event.nickName} from members list`)
+            }
+
+            // Show info notification
+            this.$q.notify({
+              type: 'info',
+              message: `@${event.nickName} bol vykopnutý`,
+              caption: event.reason,
+              position: 'top',
+              timeout: 3000
+            })
+          }
         }
       })
     },
     setupInviteListener(): void {
       websocketService.onChannelInvited((event) => {
-        console.log('User was invited to channel:', event)
+        console.log('Received channel invitation:', event)
 
         // Show notification to user
         this.$q.notify({
@@ -664,19 +668,28 @@ export default defineComponent({
           message: `Bol si pozvaný do kanála #${event.channelName}`,
           caption: `Pozval ťa @${event.invitedBy}`,
           position: 'top',
-          timeout: 5000
+          timeout: 5000,
+          actions: [
+            {
+              label: 'Zobraziť pozvánky',
+              color: 'white',
+              handler: () => {
+                // This will trigger the invitation dialog in ChannelList
+                this.leftDrawerOpen = true
+              }
+            }
+          ]
         })
 
-        // Reload channels to include new invitation
+        // Reload invitations in real-time
         void this.loadInitialData()
       })
     },
     setupChannelDeletedListener(): void {
       console.log('Setting up channel deleted listener...')
       websocketService.onChannelDeleted((event) => {
-        console.log('🔴 Channel was deleted event received:', event)
+        console.log('Channel was deleted event received:', event)
 
-        // Convert channelId to number for proper comparison
         const channelId = Number(event.channelId)
         console.log('Channel ID (converted to number):', channelId, 'Current channel:', this.currentChannelId)
 
@@ -689,11 +702,11 @@ export default defineComponent({
           timeout: 5000
         })
 
-        // Check if deleted channel is current (use number comparison)
+        // Check if deleted channel is current
         const wasCurrentChannel = this.currentChannelId === channelId
         console.log('Was current channel?', wasCurrentChannel)
 
-        // Remove channel from list using number comparison
+        // Remove channel from list
         const channelIndex = this.channels.findIndex(c => c.id === channelId)
         console.log('Channel index found:', channelIndex)
 
@@ -715,12 +728,9 @@ export default defineComponent({
           // Use nextTick to ensure channels list is updated first
           void this.$nextTick(() => {
             console.log('Inside nextTick - channels available:', this.channels.length)
-            if (this.channels.length > 0) {
-              const firstChannel = this.channels[0]
-              if (firstChannel) {
-                console.log('Switching to first available channel:', firstChannel.name)
-                this.selectChannel(firstChannel)
-              }
+            if (this.channels.length > 0 && this.channels[0]) {
+              console.log('Switching to first available channel:', this.channels[0].name)
+              this.selectChannel(this.channels[0])
             } else {
               console.log('No channels left after deletion')
             }
