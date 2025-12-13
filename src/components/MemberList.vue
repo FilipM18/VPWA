@@ -160,7 +160,9 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import MemberItem from './MemberItem.vue';
-import type { User, UserStatus } from '../types';
+import type { UserStatus } from '../types';
+import type { MemberWithUser } from '../api';
+import { kickMember } from '../api';
 import { mockUsers } from '../utils/mockData';
 
 export default defineComponent({
@@ -170,7 +172,7 @@ export default defineComponent({
   },
   props: {
     members: {
-      type: Array as PropType<User[]>,
+      type: Array as PropType<MemberWithUser[]>,
       default: () => [],
     },
     isAdmin: {
@@ -181,6 +183,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    channelId: {
+      type: Number,
+      required: false,
+    },
   },
   emits: ['close'],
   data() {
@@ -188,29 +194,6 @@ export default defineComponent({
       search: '',
       mockUsers,
       showVoteKickDialog: false,
-      activeVoteKicks: [
-        {
-          userId: 6,
-          userName: 'Tomáš Kováč',
-          votes: 1,
-          required: 3,
-          hasVoted: false,
-        },
-                {
-          userId: 6,
-          userName: 'Tomáš Kováč',
-          votes: 1,
-          required: 3,
-          hasVoted: false,
-        },
-                {
-          userId: 6,
-          userName: 'Tomáš Kováč',
-          votes: 1,
-          required: 3,
-          hasVoted: false,
-        }
-      ],
     };
   },
   computed: {
@@ -227,7 +210,18 @@ export default defineComponent({
         return null;
       }
     },
-    filteredMembers(): User[] {
+    activeVoteKicks(): Array<{ userId: number; userName: string; votes: number; required: number; hasVoted: boolean }> {
+      return this.members
+        .filter(m => m.kickVotes > 0)
+        .map(m => ({
+          userId: m.id,
+          userName: m.nickName,
+          votes: m.kickVotes,
+          required: 3,
+          hasVoted: this.currentUserId ? m.kickVoters.includes(this.currentUserId) : false,
+        }));
+    },
+    filteredMembers(): MemberWithUser[] {
       if (!this.search) {
         return this.members;
       }
@@ -241,13 +235,13 @@ export default defineComponent({
         );
       });
     },
-    onlineMembers(): User[] {
+    onlineMembers(): MemberWithUser[] {
       return this.filteredMembers.filter((member) => member.status === 'online');
     },
-    dndMembers(): User[] {
+    dndMembers(): MemberWithUser[] {
       return this.filteredMembers.filter((member) => member.status === 'dnd');
     },
-    offlineMembers(): User[] {
+    offlineMembers(): MemberWithUser[] {
       return this.filteredMembers.filter((member) => member.status === 'offline');
     },
     totalMembers(): number {
@@ -280,29 +274,36 @@ export default defineComponent({
           color: 'warning',
         },
       }).onOk(() => {
-        // Update the vote
-        vote.hasVoted = true;
-        vote.votes++;
-        
-        this.$q.notify({
-          type: 'positive',
-          message: `Hlasovali ste za vyhodenie používateľa ${vote.userName}.`,
-          position: 'top',
-        });
-
-        // Check if vote passed
-        if (vote.votes >= vote.required) {
+        if (!this.channelId) {
           this.$q.notify({
-            type: 'warning',
-            message: `Hlasovanie o vyhodení používateľa ${vote.userName} bolo úspešné!`,
+            type: 'negative',
+            message: 'Chyba: Kanál nebol nájdený',
             position: 'top',
           });
-          // Remove from active votes
-          const index = this.activeVoteKicks.findIndex(v => v.userId === vote.userId);
-          if (index > -1) {
-            this.activeVoteKicks.splice(index, 1);
-          }
+          return;
         }
+
+        const token = localStorage.getItem('auth_token') || undefined;
+        
+        kickMember(this.channelId, vote.userName, token)
+          .then((result) => {
+            this.$q.notify({
+              type: 'positive',
+              message: result.message,
+              position: 'top',
+            });
+
+            // If user was banned, they'll be removed via websocket event
+            // If it's just a vote, the member list will be updated via websocket
+          })
+          .catch((error) => {
+            console.error('Failed to vote for kick:', error);
+            this.$q.notify({
+              type: 'negative',
+              message: error instanceof Error ? error.message : 'Nepodarilo sa zahlasovať',
+              position: 'top',
+            });
+          });
       });
     },
   },

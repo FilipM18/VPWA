@@ -38,6 +38,10 @@ type ApiChannelMember = {
   role?: string
   is_banned?: boolean
   isBanned?: boolean
+  kick_votes?: number
+  kickVotes?: number
+  kick_voters?: number[]
+  kickVoters?: number[]
   user?: {
     id: number
     first_name?: string
@@ -98,7 +102,13 @@ export async function getChannels(token?: string): Promise<Channel[]> {
   return data.map(normalizeChannel)
 }
 
-export async function getChannelMembers(channelId: number, token?: string): Promise<User[]> {
+export interface MemberWithUser extends User {
+  kickVotes: number
+  kickVoters: number[]
+  role?: string
+}
+
+export async function getChannelMembers(channelId: number, token?: string): Promise<MemberWithUser[]> {
   const res = await fetch(`${API_BASE}/channels/${channelId}/members`, {
     headers: authHeaders(token)
   })
@@ -108,7 +118,16 @@ export async function getChannelMembers(channelId: number, token?: string): Prom
     throw new Error(`Failed to load members: ${res.status} ${txt}`)
   }
   const data = (await res.json()) as ApiChannelMember[]
-  return data.map(m => normalizeUser(m.user)).filter((u): u is User => u !== undefined)
+  return data.map(m => {
+    const user = normalizeUser(m.user)
+    if (!user) return undefined
+    return {
+      ...user,
+      kickVotes: m.kickVotes ?? m.kick_votes ?? 0,
+      kickVoters: m.kickVoters ?? m.kick_voters ?? [],
+      role: m.role
+    } as MemberWithUser
+  }).filter((u): u is MemberWithUser => u !== undefined)
 }
 
 export async function getCurrentUser(token?: string): Promise<User> {
