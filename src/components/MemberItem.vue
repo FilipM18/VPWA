@@ -86,13 +86,13 @@ export default defineComponent({
         'rounded-borders',
         'q-mb-xs',
         {
-          'opacity-50': this.member.status === 'offline',
+          'opacity-70': this.member.status === 'offline',
         },
       ];
     },
     avatarColor(): string {
       if (this.member.status === 'offline') {
-        return 'grey-4';
+        return 'grey-6';
       }
       const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning'];
       const hash = this.member.nickName

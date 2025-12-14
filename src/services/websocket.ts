@@ -51,6 +51,12 @@ export interface KickVoteUpdateEvent {
   votedBy: string
 }
 
+export interface UserStatusChangedEvent {
+  userId: number
+  nickName: string
+  status: 'online' | 'dnd' | 'offline'
+}
+
 class WebSocketService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private socket: any = null
@@ -67,6 +73,7 @@ class WebSocketService {
   private channelInvitedListeners: Set<(event: ChannelInvitedEvent) => void> = new Set()
   private channelDeletedListeners: Set<(event: ChannelDeletedEvent) => void> = new Set()
   private kickVoteUpdateListeners: Set<(event: KickVoteUpdateEvent) => void> = new Set()
+  private statusChangedListeners: Set<(event: UserStatusChangedEvent) => void> = new Set()
 
   // Public getter for connection status
   get connected(): boolean {
@@ -158,6 +165,11 @@ class WebSocketService {
       this.socket.on('kick_vote_updated', (event: KickVoteUpdateEvent) => {
         console.log('Received kick_vote_updated event:', event)
         this.kickVoteUpdateListeners.forEach((listener) => listener(event))
+      })
+
+      this.socket.on('user_status_changed', (event: UserStatusChangedEvent) => {
+        console.log('Received user_status_changed event:', event)
+        this.statusChangedListeners.forEach((listener) => listener(event))
       })
 
       // Connection timeout
@@ -288,6 +300,11 @@ class WebSocketService {
   onKickVoteUpdate(callback: (event: KickVoteUpdateEvent) => void): () => void {
     this.kickVoteUpdateListeners.add(callback)
     return () => this.kickVoteUpdateListeners.delete(callback)
+  }
+
+  onStatusChanged(callback: (event: UserStatusChangedEvent) => void): () => void {
+    this.statusChangedListeners.add(callback)
+    return () => this.statusChangedListeners.delete(callback)
   }
 
   isSocketConnected(): boolean {

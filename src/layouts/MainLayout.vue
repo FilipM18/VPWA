@@ -148,7 +148,7 @@ import TypingIndicatorChip from '../components/TypingIndicator.vue'
 import MemberList from '../components/MemberList.vue';
 import UserStatusMenu from '../components/UserStatus.vue';
 import type { Channel, User, UserStatus, ChatMessage, TypingUser } from '../types';
-import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel, type MemberWithUser } from '../api'
+import { getChannels, getCurrentUser, getInvitations, acceptInvitation, rejectInvitation, getChannelMembers, logout, joinChannel, leaveChannel, updateUserStatus, type MemberWithUser } from '../api'
 import websocketService from '../services/websocket'
 import notificationService from '../services/notificationService'
 
@@ -176,6 +176,7 @@ export default defineComponent({
       messageListenerUnsubscribe: null as (() => void) | null,
       userJoinedListenerUnsubscribe: null as (() => void) | null,
       userLeftListenerUnsubscribe: null as (() => void) | null,
+      statusChangedListenerUnsubscribe: null as (() => void) | null,
     };
   },
   computed: {
@@ -245,6 +246,8 @@ export default defineComponent({
         this.setupChannelDeletedListener()
         // Setup member join/leave listeners
         this.setupMemberJoinLeaveListeners()
+        // Setup status change listener
+        this.setupStatusChangeListener()
       } catch (error) {
         console.error('Failed to connect WebSocket:', error)
         this.$q.notify({
@@ -274,6 +277,10 @@ export default defineComponent({
     }
     if (this.userLeftListenerUnsubscribe) {
       this.userLeftListenerUnsubscribe()
+    }
+    // Clean up status change listener
+    if (this.statusChangedListenerUnsubscribe) {
+      this.statusChangedListenerUnsubscribe()
     }
 
     // DON'T disconnect WebSocket here - it should stay connected across layouts
@@ -384,9 +391,71 @@ export default defineComponent({
       // Redirect to auth page
       void this.$router.push('/auth')
     },
-    handleStatusChange(newStatus: UserStatus): void {
-      if (this.currentUser) {
+    async handleStatusChange(newStatus: UserStatus): Promise<void> {
+      if (!this.currentUser) return;
+
+      const token = localStorage.getItem('auth_token') || undefined
+      try {
+        // Handle offline - first broadcast status, then disconnect WebSocket
+        if (newStatus === 'offline') {
+          // First broadcast offline status to all members via API
+          await updateUserStatus(newStatus, token)
+          // Then disconnect WebSocket
+          websocketService.disconnect()
+          // Update local state - currentUser
+          this.currentUser.status = 'offline'
+          // Update local state - myself in members list
+          const myIndex = this.members.findIndex(m => m.id === this.currentUser?.id)
+          if (myIndex !== -1) {
+            const me = this.members[myIndex]!
+            me.status = 'offline'
+            this.members.splice(myIndex, 1, me)
+          }
+          return
+        }
+
+        // Handle online/dnd - reconnect WebSocket if disconnected
+        if (!websocketService.connected && token) {
+          await websocketService.connect(token)
+          // Re-setup listeners after reconnect
+          this.setupNotificationListener()
+          this.setupKickBanListener()
+          this.setupInviteListener()
+          this.setupChannelDeletedListener()
+          this.setupMemberJoinLeaveListeners()
+          this.setupStatusChangeListener()
+          // Reload channels and members
+          await this.loadInitialData()
+
+          // Force ChatPage to reload messages by toggling channel
+          const savedChannelId = this.currentChannelId
+          if (savedChannelId) {
+            this.currentChannelId = null
+            await this.$nextTick()
+            this.currentChannelId = savedChannelId
+            websocketService.joinChannel(savedChannelId)
+          }
+        }
+
+        // Update status via API (for dnd/online - broadcasts via WebSocket)
+        await updateUserStatus(newStatus, token)
+
+        // Update local state - currentUser
         this.currentUser.status = newStatus;
+        // Update local state - myself in members list
+        const myIndex = this.members.findIndex(m => m.id === this.currentUser?.id)
+        if (myIndex !== -1) {
+          const me = this.members[myIndex]!
+          me.status = newStatus
+          this.members.splice(myIndex, 1, me)
+        }
+      } catch (error) {
+        console.error('Failed to update status:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa zmeniť status',
+          position: 'top'
+        })
       }
     },
     handleMessageSent(message: ChatMessage): void {
@@ -639,7 +708,7 @@ export default defineComponent({
           // Update member list by removing the kicked user
           if (event.userId && this.currentChannelId === event.channelId) {
             console.log(`User ${event.nickName} was kicked from current channel`)
-            
+
             const memberIndex = this.members.findIndex(m => m.id === event.userId)
             if (memberIndex >= 0) {
               this.members.splice(memberIndex, 1)
@@ -754,7 +823,7 @@ export default defineComponent({
           member.kickVotes = event.kickVotes
           member.kickVoters = event.kickVoters
           this.$forceUpdate() // Force re-render to update computed properties
-          
+
           this.$q.notify({
             type: 'info',
             message: `Hlas pre vyhodenie @${event.nickName} zaznamenaný (${event.kickVotes}/3)`,
@@ -796,6 +865,30 @@ export default defineComponent({
         if (index >= 0) {
           this.members.splice(index, 1)
           console.log(`Removed user ${event.nickName} from members list`)
+        }
+      })
+    },
+    setupStatusChangeListener(): void {
+      // Listen for status changes from other users
+      this.statusChangedListenerUnsubscribe = websocketService.onStatusChanged((event) => {
+        console.log('User status changed:', event)
+        console.log('Current members:', this.members.map(m => ({ id: m.id, nickName: m.nickName, status: m.status })))
+
+        // Update in members list - use splice for Vue reactivity
+        const memberIndex = this.members.findIndex(m => m.id === event.userId)
+        if (memberIndex !== -1) {
+          // Update status directly on the member and trigger reactivity with splice
+          const member = this.members[memberIndex]!
+          member.status = event.status
+          this.members.splice(memberIndex, 1, member)
+          console.log(`Updated status of ${event.nickName} to ${event.status}`)
+        } else {
+          console.log(`Member with id ${event.userId} not found in members list`)
+        }
+
+        // Update currentUser if it's the same user (shouldn't happen often as we update locally too)
+        if (this.currentUser && this.currentUser.id === event.userId) {
+          this.currentUser.status = event.status
         }
       })
     },
