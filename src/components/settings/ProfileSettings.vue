@@ -38,7 +38,7 @@
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
         <div class="text-subtitle1 text-weight-medium q-mb-md">Osobné informácie</div>
-        
+
         <div class="row q-col-gutter-md q-mb-md">
           <div class="col-12 col-sm-6">
             <q-input
@@ -187,6 +187,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import type { User, UserStatus } from '../../types';
+import { updateProfile } from '../../api';
 
 export default defineComponent({
   name: 'ProfileSettings',
@@ -221,7 +222,7 @@ export default defineComponent({
     handleAvatarChange(event: Event): void {
       const target = event.target as HTMLInputElement;
       const file = target.files?.[0];
-      
+
       if (!file) return;
 
       if (file.size > 2 * 1024 * 1024) {
@@ -245,7 +246,7 @@ export default defineComponent({
     updateStatus(status: UserStatus): void {
       this.editedUser.status = status;
       this.$emit('update-profile', { status });
-      
+
       let message = '';
       switch (status) {
         case 'online':
@@ -258,7 +259,7 @@ export default defineComponent({
           message = 'Váš stav bol nastavený na Offline';
           break;
       }
-      
+
       this.$q.notify({
         type: 'positive',
         message,
@@ -266,15 +267,34 @@ export default defineComponent({
       });
     },
 
-    saveProfile(): void {
-      console.log('Profile save requested (static - no backend)');
-      this.$emit('update-profile', {
-        firstName: this.editedUser.firstName,
-        lastName: this.editedUser.lastName,
-        nickName: this.editedUser.nickName,
-        email: this.editedUser.email,
-        avatarUrl: this.editedUser.avatarUrl
-      });
+    async saveProfile(): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined;
+
+      try {
+        const updatedUser = await updateProfile({
+          firstName: this.editedUser.firstName,
+          lastName: this.editedUser.lastName,
+          nickName: this.editedUser.nickName,
+          email: this.editedUser.email,
+          avatarUrl: this.editedUser.avatarUrl
+        }, token);
+
+        // Emit updated user to parent
+        this.$emit('update-profile', updatedUser);
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Profil bol úspešne aktualizovaný',
+          position: 'top'
+        });
+      } catch (error) {
+        console.error('Failed to update profile:', error);
+        this.$q.notify({
+          type: 'negative',
+          message: error instanceof Error ? error.message : 'Nepodarilo sa aktualizovať profil',
+          position: 'top'
+        });
+      }
     },
 
     resetForm(): void {

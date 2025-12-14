@@ -1,25 +1,39 @@
 <template>
   <div class="settings-page">
-    <!-- Profile Section -->
-    <profile-settings
-      v-if="currentSection === 'profile'"
-      :current-user="currentUser"
-      @update-profile="handleProfileUpdate"
-    />
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex flex-center q-pa-xl">
+      <q-spinner size="50px" color="primary" />
+    </div>
 
-    <!-- Security Section -->
-    <security-settings
-      v-if="currentSection === 'security'"
-      :current-user="currentUser"
-      @update-password="handlePasswordUpdate"
-    />
+    <template v-else-if="currentUser">
+      <!-- Profile Section -->
+      <profile-settings
+        v-if="currentSection === 'profile'"
+        :current-user="currentUser"
+        @update-profile="handleProfileUpdate"
+      />
 
-    <!-- Notifications Section -->
-    <notification-settings
-      v-if="currentSection === 'notifications'"
-      :notification-settings="notificationSettings"
-      @update-settings="handleNotificationUpdate"
-    />
+      <!-- Security Section -->
+      <security-settings
+        v-if="currentSection === 'security'"
+        :current-user="currentUser"
+        @update-password="handlePasswordUpdate"
+      />
+
+      <!-- Notifications Section -->
+      <notification-settings
+        v-if="currentSection === 'notifications'"
+        :notification-settings="notificationSettings"
+        @update-settings="handleNotificationUpdate"
+      />
+    </template>
+
+    <!-- Error State -->
+    <div v-else class="text-center q-pa-xl">
+      <q-icon name="error" size="50px" color="negative" />
+      <div class="text-h6 q-mt-md">Nepodarilo sa načítať používateľa</div>
+      <q-btn color="primary" label="Skúsiť znova" class="q-mt-md" @click="loadCurrentUser" />
+    </div>
   </div>
 </template>
 
@@ -29,6 +43,8 @@ import ProfileSettings from '../components/settings/ProfileSettings.vue';
 import SecuritySettings from '../components/settings/SecuritySettings.vue';
 import NotificationSettings from '../components/settings/NotificationSettings.vue';
 import type { User, NotificationPreferences } from '../types';
+import { getCurrentUser } from '../api';
+import notificationService from '../services/notificationService';
 
 export default defineComponent({
   name: 'SettingsPage',
@@ -45,75 +61,45 @@ export default defineComponent({
   },
   data() {
     return {
-      currentUser: {
-        id: 1,
-        firstName: 'Ján',
-        lastName: 'Novák',
-        nickName: 'janko_novak',
-        email: 'jan.novak@example.com',
-        status: 'online',
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date(),
-        avatarUrl: ''
-      } as User,
-      notificationSettings: {
-        mentionsOnly: false,
-        enableDndMode: false,
-        newMessages: true,
-        directMessages: true,
-        channelInvites: true,
-        soundEnabled: true,
-        soundVolume: 70
-      } as NotificationPreferences
+      currentUser: null as User | null,
+      isLoading: true,
+      notificationSettings: notificationService.getPreferences()
     };
   },
+  async mounted() {
+    await this.loadCurrentUser();
+  },
   methods: {
-    handleProfileUpdate(updates: Partial<User>): void {
-      console.log('Profile update (pripravené pre backend):', updates);
-      
-      Object.assign(this.currentUser, updates);
-      
-      this.$q.notify({
-        type: 'positive',
-        message: 'Profil bol úspešne aktualizovaný',
-        position: 'top'
-      });
-      
-      // TODO: API call
-      // await api.updateProfile(updates);
-    },
-    
-    handlePasswordUpdate(): void {
-      
-      this.$q.notify({
-        type: 'positive',
-        message: 'Heslo bolo úspešne zmenené',
-        position: 'top'
-      });
-      
-      // TODO: API call
-      // await api.changePassword(passwords);
-    },
-    
-    handleNotificationUpdate(settings: NotificationPreferences): void {
-      console.log('Notification settings (pripravené pre backend):', settings);
-      
-      this.notificationSettings = settings;
-      
-      if (settings.enableDndMode && this.currentUser.status !== 'dnd') {
-        this.currentUser.status = 'dnd';
-      } else if (!settings.enableDndMode && this.currentUser.status === 'dnd') {
-        this.currentUser.status = 'online';
+    async loadCurrentUser(): Promise<void> {
+      const token = localStorage.getItem('auth_token') || undefined;
+      try {
+        this.currentUser = await getCurrentUser(token);
+      } catch (error) {
+        console.error('Failed to load current user:', error);
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nepodarilo sa načítať používateľa',
+          position: 'top'
+        });
+      } finally {
+        this.isLoading = false;
       }
-      
-      this.$q.notify({
-        type: 'positive',
-        message: 'Nastavenia notifikácií boli uložené',
-        position: 'top'
-      });
-      
-      // TODO: API call
-      // await api.updateNotificationSettings(settings);
+    },
+
+    handleProfileUpdate(updatedUser: User): void {
+      // Update local state with the response from API
+      this.currentUser = updatedUser;
+    },
+
+    handlePasswordUpdate(): void {
+      // Password was already changed via API in SecuritySettings
+      // Just show success notification is handled there
+    },
+
+    handleNotificationUpdate(settings: NotificationPreferences): void {
+      this.notificationSettings = settings;
+
+      // DND sync is handled in NotificationSettings via MainLayout
     }
   }
 });
