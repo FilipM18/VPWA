@@ -285,37 +285,12 @@ export default defineComponent({
     leaveChannel(channel: Channel): void {
       console.log('ChannelList: leaveChannel called for', channel.name)
 
-      // Ak je admin, ponúkni možnosť zmazať alebo len opustiť
+      // Ak je admin, automaticky zmazať kanál (kanál bez admina nemôže existovať)
       const isAdmin = channel.adminId === this.currentUserId
 
       if (isAdmin) {
-        this.$q
-          .dialog({
-            title: 'Opustiť kanál',
-            message: `Si správca kanála #${channel.name}. Chceš kanál zmazať alebo ho len opustiť?`,
-            cancel: {
-              label: 'Zrušiť',
-              flat: true,
-            },
-            options: {
-              type: 'radio',
-              model: 'leave',
-              items: [
-                { label: 'Len opustiť (kanál ostane bez správcu)', value: 'leave' },
-                { label: 'Zmazať kanál natrvalo', value: 'delete' },
-              ],
-            },
-            persistent: false,
-          })
-          .onOk((choice: string) => {
-            if (choice === 'delete') {
-              console.log('ChannelList: Admin chose to delete channel')
-              this.$emit('channel-deleted', channel);
-            } else {
-              console.log('ChannelList: Admin chose to leave channel')
-              this.$emit('channel-left', channel);
-            }
-          });
+        console.log('ChannelList: Admin leaving, automatically deleting channel')
+        this.$emit('channel-deleted', channel);
       } else {
         // Nie je admin, len opustí
         this.$q

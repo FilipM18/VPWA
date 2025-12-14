@@ -134,6 +134,7 @@ export default defineComponent({
       unsubscribers: [] as Array<() => void>,
       typingUsers: [] as TypingUser[],
       typingTimeouts: new Map<number, NodeJS.Timeout>(),
+      hasShownInviteMessage: false,
     }
   },
   mounted() {
@@ -251,6 +252,9 @@ export default defineComponent({
     currentUserId(): number {
       return this.currentUser.id
     },
+    isInvitedChannel(): boolean {
+      return this.channels.find(c => c.id === this.channelId)?.isNewInvite ?? false
+    },
     messagesWithDates(): MessageListItem[] {
       const items: MessageListItem[] = []
       let lastDate: string | null = null
@@ -279,6 +283,7 @@ export default defineComponent({
         this.hasMore = true
         this.oldestMessageId = null
         this.initialLoad = true
+        this.hasShownInviteMessage = false
 
         // Clear typing users
         this.typingUsers = []
@@ -309,11 +314,20 @@ export default defineComponent({
         this.initialLoad = false
       } catch (error) {
         console.error('Failed to load messages:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Nepodarilo sa načítať správy',
-          position: 'top'
-        })
+        if (this.isInvitedChannel && !this.hasShownInviteMessage) {
+          this.hasShownInviteMessage = true
+          this.$q.notify({
+            type: 'info',
+            message: 'Nevidíš informácie kým nepríjmeš pozvánku',
+            position: 'top'
+          })
+        } else if (!this.isInvitedChannel) {
+          this.$q.notify({
+            type: 'negative',
+            message: 'Nepodarilo sa načítať správy',
+            position: 'top'
+          })
+        }
         this.initialLoad = false
       }
     },
@@ -378,11 +392,20 @@ export default defineComponent({
         done(!this.hasMore)
       } catch (error) {
         console.error('Failed to load older messages:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Nepodarilo sa načítať staršie správy',
-          position: 'top'
-        })
+        if (this.isInvitedChannel && !this.hasShownInviteMessage) {
+          this.hasShownInviteMessage = true
+          this.$q.notify({
+            type: 'info',
+            message: 'Nevidíš informácie kým nepríjmeš pozvánku',
+            position: 'top'
+          })
+        } else if (!this.isInvitedChannel) {
+          this.$q.notify({
+            type: 'negative',
+            message: 'Nepodarilo sa načítať staršie správy',
+            position: 'top'
+          })
+        }
         this.loadingOlder = false
         done(true)
       }

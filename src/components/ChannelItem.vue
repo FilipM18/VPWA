@@ -16,7 +16,7 @@
 
     <q-item-section>
       <q-item-label lines="1">
-        {{ channel.name }}
+        {{ truncatedName }}
       </q-item-label>
       <q-item-label v-if="channel.lastMessage" caption lines="1">
         {{ channel.lastMessage }}
@@ -119,6 +119,12 @@ export default defineComponent({
     }
   },
   emits: ['select', 'leave', 'delete', 'accept', 'reject'],
+  computed: {
+    truncatedName(): string {
+      const maxLength = 16 // 16 max na viac už treba scroll
+      return this.channel.name.length > maxLength ? this.channel.name.substring(0, maxLength) + '...' : this.channel.name
+    }
+  },
   methods: {
     handleLeaveClick() {
       console.log('ChannelItem: handleLeaveClick called for', this.channel.name)

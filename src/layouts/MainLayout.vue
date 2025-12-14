@@ -177,6 +177,9 @@ export default defineComponent({
       userJoinedListenerUnsubscribe: null as (() => void) | null,
       userLeftListenerUnsubscribe: null as (() => void) | null,
       statusChangedListenerUnsubscribe: null as (() => void) | null,
+      notifiedInvitations: new Set<number>(),
+      notifiedDeletedChannels: new Set<number>(),
+      recentlyDeletedChannelId: null as number | null,
     };
   },
   computed: {
@@ -350,10 +353,15 @@ export default defineComponent({
         })
         .catch((err: Error) => {
           console.error('Failed to load members:', err);
-          this.$q.notify({
-            type: 'negative',
-            message: 'Nepodarilo sa načítať členov kanála',
-          });
+          const channel = this.channels.find(c => c.id === id)
+          if (channel?.isNewInvite) {
+            // Don't show error for invited channels
+          } else {
+            this.$q.notify({
+              type: 'negative',
+              message: 'Nepodarilo sa načítať členov kanála',
+            });
+          }
           this.members = [];
         });
     },
@@ -568,6 +576,7 @@ export default defineComponent({
     async handleDeleteChannel(channel: Channel): Promise<void> {
       const token = localStorage.getItem('auth_token') || undefined
       try {
+        this.recentlyDeletedChannelId = channel.id
         await leaveChannel(channel.id, undefined, true, token)
         this.$q.notify({
           type: 'positive',
@@ -590,6 +599,8 @@ export default defineComponent({
           type: 'negative',
           message: err instanceof Error ? err.message : 'Nepodarilo sa zmazať kanál',
         })
+      } finally {
+        this.recentlyDeletedChannelId = null
       }
     },
     setupNotificationListener(): void {
@@ -731,6 +742,13 @@ export default defineComponent({
       websocketService.onChannelInvited((event) => {
         console.log('Received channel invitation:', event)
 
+        // Prevent duplicate notifications
+        if (this.notifiedInvitations.has(event.channelId)) {
+          console.log('Already notified for this invitation, skipping')
+          return
+        }
+        this.notifiedInvitations.add(event.channelId)
+
         // Show notification to user
         this.$q.notify({
           type: 'positive',
@@ -761,6 +779,19 @@ export default defineComponent({
 
         const channelId = Number(event.channelId)
         console.log('Channel ID (converted to number):', channelId, 'Current channel:', this.currentChannelId)
+
+        // Skip if this is the channel we just deleted
+        if (this.recentlyDeletedChannelId === channelId) {
+          console.log('Skipping notification for recently deleted channel')
+          return
+        }
+
+        // Prevent duplicate notifications
+        if (this.notifiedDeletedChannels.has(channelId)) {
+          console.log('Already notified for this deleted channel, skipping')
+          return
+        }
+        this.notifiedDeletedChannels.add(channelId)
 
         // Show notification to user
         this.$q.notify({
@@ -853,19 +884,12 @@ export default defineComponent({
         this.loadChannelMembers(this.currentChannelId)
       })
 
-      // Listen for users leaving the channel
+      // Listen for users leaving the channel room (switching to another channel)
+      // Note: This does NOT mean they left the channel as a member, just that they're viewing a different channel
+      // We don't remove them from the members list - they're still channel members
       this.userLeftListenerUnsubscribe = websocketService.onUserLeft((event) => {
-        console.log('User left channel:', event)
-
-        // Only update if we're in the current channel
-        if (!this.currentChannelId) return
-
-        // Remove user from members list
-        const index = this.members.findIndex(m => m.id === event.userId)
-        if (index >= 0) {
-          this.members.splice(index, 1)
-          console.log(`Removed user ${event.nickName} from members list`)
-        }
+        console.log('User left channel room (switched to another channel):', event)
+        // Don't remove from members list - user is still a member, just viewing a different channel
       })
     },
     setupStatusChangeListener(): void {

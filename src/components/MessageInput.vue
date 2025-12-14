@@ -230,7 +230,7 @@ export default defineComponent({
         const token = localStorage.getItem('auth_token') || undefined
         joinChannel(channelName, isPrivate, token)
           .then(() => {
-            this.$q.notify({ type: 'positive', message: `Úspęšne si sa pridal do #${channelName}` })
+            this.$q.notify({ type: 'positive', message: `Úspešne si sa pridal do #${channelName}` })
             this.$emit('command-executed', { command: 'join', channelName, isPrivate })
           })
           .catch((err: Error) => {

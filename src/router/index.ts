@@ -21,5 +21,14 @@ export default route(function () {
     history: createHistory(process.env.VUE_ROUTER_BASE)
   })
 
+  Router.beforeEach((to, from, next) => {
+    const isAuthenticated = !!localStorage.getItem('auth_token')
+    if (to.matched.some(record => record.meta.requiresAuth) && !isAuthenticated) {
+      next('/auth')
+    } else {
+      next()
+    }
+  })
+
   return Router
 })
