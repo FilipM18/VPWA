@@ -291,6 +291,23 @@ export async function logout(token?: string): Promise<void> {
   }
 }
 
+export async function updateUserStatus(
+  status: 'online' | 'dnd' | 'offline',
+  token?: string
+): Promise<{ id: number; status: string }> {
+  const res = await fetch(`${API_BASE}/auth/status`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ status }),
+  })
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Failed to update status: ${res.status} ${txt}`)
+  }
+  return await res.json()
+}
+
 export async function joinChannel(
   channelName: string,
   isPrivate: boolean,
