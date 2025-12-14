@@ -82,12 +82,14 @@
               flat
               label="Zrušiť"
               @click="resetPasswordForm"
+              :disable="isLoading"
             />
             <q-btn
               unelevated
               color="primary"
               label="Zmeniť heslo"
               type="submit"
+              :loading="isLoading"
             />
           </div>
         </q-form>
@@ -121,6 +123,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue';
 import type { User } from '../../types';
+import { updatePassword } from '../../api';
 
 export default defineComponent({
   name: 'SecuritySettings',
@@ -139,21 +142,22 @@ export default defineComponent({
         confirmPassword: ''
       },
       showNewPassword: false,
-      showConfirmPassword: false
+      showConfirmPassword: false,
+      isLoading: false
     };
   },
   computed: {
     passwordStrength(): number {
       const password = this.passwordForm.newPassword;
       if (!password) return 0;
-      
+
       let strength = 0;
       if (password.length >= 8) strength += 25;
       if (password.length >= 12) strength += 25;
       if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
       if (/\d/.test(password)) strength += 15;
       if (/[!@#$%^&*]/.test(password)) strength += 10;
-      
+
       return Math.min(100, strength);
     },
     passwordStrengthColor(): string {
@@ -170,13 +174,37 @@ export default defineComponent({
     }
   },
   methods: {
-    handlePasswordChange(): void {
-      console.log('Password change requested (static - no backend)');
-      this.$emit('update-password', {
-        currentPassword: this.passwordForm.currentPassword,
-        newPassword: this.passwordForm.newPassword
-      });
-      this.resetPasswordForm();
+    async handlePasswordChange(): Promise<void> {
+      if (this.isLoading) return;
+
+      const token = localStorage.getItem('auth_token') || undefined;
+      this.isLoading = true;
+
+      try {
+        await updatePassword(
+          this.passwordForm.currentPassword,
+          this.passwordForm.newPassword,
+          token
+        );
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Heslo bolo úspešne zmenené',
+          position: 'top'
+        });
+
+        this.resetPasswordForm();
+        this.$emit('update-password');
+      } catch (error) {
+        console.error('Failed to update password:', error);
+        this.$q.notify({
+          type: 'negative',
+          message: error instanceof Error ? error.message : 'Nepodarilo sa zmeniť heslo',
+          position: 'top'
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
 
     resetPasswordForm(): void {

@@ -405,6 +405,71 @@ export async function getMessages(
   }
 }
 
+// Update user profile
+export async function updateProfile(
+  data: {
+    firstName?: string
+    lastName?: string
+    nickName?: string
+    email?: string
+    avatarUrl?: string | undefined
+  },
+  token?: string
+): Promise<User> {
+  const res = await fetch(`${API_BASE}/auth/profile`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  })
+
+  if (res.status === 401) throw new Error('Unauthorized')
+  if (res.status === 409) {
+    const json = await res.json()
+    throw new Error(json.message || 'Conflict: Nickname or email already taken')
+  }
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Failed to update profile: ${res.status} ${txt}`)
+  }
+
+  const json = await res.json()
+  return {
+    id: json.id,
+    firstName: json.firstName,
+    lastName: json.lastName,
+    nickName: json.nickName,
+    email: json.email,
+    status: json.status,
+    avatarUrl: json.avatarUrl,
+  }
+}
+
+// Update user password
+export async function updatePassword(
+  currentPassword: string,
+  newPassword: string,
+  token?: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/password`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+
+  if (res.status === 401) {
+    const json = await res.json()
+    throw new Error(json.message || 'Current password is incorrect')
+  }
+  if (res.status === 400) {
+    const json = await res.json()
+    throw new Error(json.message || 'Invalid new password')
+  }
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Failed to update password: ${res.status} ${txt}`)
+  }
+}
+
 export default {
   getChannels,
   getChannelMembers,
@@ -419,4 +484,6 @@ export default {
   joinChannel,
   inviteToChannel,
   leaveChannel,
+  updateProfile,
+  updatePassword,
 }
